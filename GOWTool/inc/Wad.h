@@ -23,7 +23,6 @@ struct WadFile
 	};
 	vector<FileDesc> _FileEntries;
 	bool Read(const std::filesystem::path& filepath);
-	bool GetBuffer(const uint32_t& entryIdx, uint8_t* output);
 	bool GetBuffer(const uint32_t& entryIdx, std::iostream& outstream);
 private:
 	ifstream fs;

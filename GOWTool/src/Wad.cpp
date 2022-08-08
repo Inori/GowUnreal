@@ -27,7 +27,7 @@ bool WadFile::Read(const std::filesystem::path& filepath)
 		char name[0x38];
 		fs.read(name, sizeof(name));
 		entry.name = string(name);
-		fs.seekg(0x10, ios::cur);
+		fs.seekg(0x10, ios::cur); // YouLoveFromMaya\0
 		if (entry.size != 0)
 		{
 			entry.offset = static_cast<uint32_t>(fs.tellg());
@@ -40,18 +40,7 @@ bool WadFile::Read(const std::filesystem::path& filepath)
 	}
 	return true;
 }
-bool WadFile::GetBuffer(const uint32_t& entryIdx,uint8_t* output)
-{
-	/*
-	if (entryIdx >= _Entries.size())
-		return false;
-	output = new uint8_t[_Sizes[entryIdx]];
-	fs.seekg(_Offsets[entryIdx], std::ios::beg);
-	fs.read((char*)output, _Sizes[entryIdx]);
-	*/
-	return true;
-	
-}
+
 bool WadFile::GetBuffer(const uint32_t& entryIdx, std::iostream& outstream)
 {
 	
