@@ -2,6 +2,8 @@
 
 struct WadFile
 {
+	~WadFile();
+
 	enum class FileType : uint16_t
 	{
 		None = 0x0,

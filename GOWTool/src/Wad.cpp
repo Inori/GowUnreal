@@ -1,6 +1,11 @@
 #include "pch.h"
 #include "Wad.h"
 
+WadFile::~WadFile()
+{
+	fs.close();
+}
+
 bool WadFile::Read(const std::filesystem::path& filepath)
 {
 	if (!std::filesystem::exists(filepath))

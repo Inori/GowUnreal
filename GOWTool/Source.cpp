@@ -4,7 +4,7 @@
 #include "Formats.h"
 #include "MainFunctions.h"
 #include "Texpack.h"
-#include "Lodpak.h"
+#include "Lodpack.h"
 #include "Wad.h"
 #include "krak.h"
 #include "utils.h"
@@ -464,12 +464,6 @@ void PrintHelp()
 }
 int main(int argc, char* argv[])
 {
-    /*
-    for (int i = 0; i < argc; i++)
-    {
-        printf("arg[%d]: %s\n", i, argv[i]);
-    }
-    */
     if (argc < 2)
     {
         Utils::Logger::Error("Required argument was not provided.\n");
@@ -483,6 +477,9 @@ int main(int argc, char* argv[])
 
     GetPrivateProfileStringA("Settings", "Gamedir", "", charbuffer, sizeof(charbuffer), configpath.string().c_str());
     std::filesystem::path gamedir(charbuffer);
+
+    GetPrivateProfileStringA("Settings", "Outdir", "", charbuffer, sizeof(charbuffer), configpath.string().c_str());
+    std::filesystem::path outdir(charbuffer);
 
     std::string command(argv[1]);
 
@@ -516,11 +513,11 @@ int main(int argc, char* argv[])
             return -1;
         }
         std::filesystem::path path;
-        std::filesystem::path outdir;
         bool mesh = false;
         bool texture = false;
         bool extract = false;
         bool dds = false;
+        bool all = false;
         for (int i = 2; i < argc; i++)
         {
             std::string op(argv[i]);
@@ -573,6 +570,10 @@ int main(int argc, char* argv[])
             {
                 texture = true;
             }
+            else if (op == "-a" || op == "--all")
+            {
+                all = true;
+            }
             else
             {
                 Utils::Logger::Error(("\nInvalid option or argument: " + op).c_str());
@@ -586,7 +587,8 @@ int main(int argc, char* argv[])
             LogHelp();
             return -1;
         }
-        if (path.empty() || !path.is_absolute() || !std::filesystem::exists(path) || !std::filesystem::is_regular_file(path) || path.extension().string() != ".wad")
+        if (!all && 
+            (path.empty() || !path.is_absolute() || !std::filesystem::exists(path) || !std::filesystem::is_regular_file(path) || path.extension().string() != ".wad"))
         {
             Utils::Logger::Error(("\nInvalid/Unspecified .wad file path: " + path.string()).c_str());
             LogHelp();
@@ -609,71 +611,107 @@ int main(int argc, char* argv[])
             LogHelp();
             return -1;
         }
-        WadFile wad;
-        wad.Read(path);
-        if (extract)
+
+        auto ExtractWad = [&](const std::filesystem::path& wadpath)
         {
-            if (ExtractAllFiles(wad, outdir))
+            auto outpath = outdir / wadpath.stem();
+            std::filesystem::create_directory(outpath);
+
+            WadFile wad;
+            wad.Read(wadpath);
+            if (extract)
             {
-                Utils::Logger::Success(("\nSuccessfully extracted all files to: " + outdir.string()).c_str());
-            }
-            else
-            {
-                Utils::Logger::Error("\nMeshes export Failed.");
-            }
-        }
-        if (mesh)
-        {
-            std::filesystem::recursive_directory_iterator dir(gamedir);
-            std::vector<Lodpack*> lodpacks;
-            for (const std::filesystem::directory_entry& entry : dir)
-            {
-                if (entry.path().extension().string() == ".lodpack")
+                if (ExtractAllFiles(wad, outpath))
                 {
-                    Lodpack* pack = new Lodpack(entry.path().string());
-                    lodpacks.push_back(pack);
+                    Utils::Logger::Success(("\nSuccessfully extracted all files to: " + outpath.string()).c_str());
+                }
+                else
+                {
+                    Utils::Logger::Error("\nMeshes export Failed.");
                 }
             }
-            if (lodpacks.size() < 1)
+            if (mesh)
             {
-                Utils::Logger::Error("\nspecified gamedir(including sub-directories) doesn't contain any .lodpack files, export failed");
-                return -1;
-            }
-            if (ExportAllSkinnedMesh(wad, lodpacks, outdir) && ExportAllRigidMesh(wad, lodpacks, outdir))
-            {
-                Utils::Logger::Success(("\nSuccessfully exported all meshes to: " + outdir.string()).c_str());
-            }
-            else
-            {
-                Utils::Logger::Error("\nMeshes export Failed.");
-            }
-        }
-        if (texture)
-        {
-            std::filesystem::recursive_directory_iterator dir(gamedir);
-            std::vector<Texpack*> texpacks;
-            for (const std::filesystem::directory_entry& entry : dir)
-            {
-                if (entry.path().extension().string() == ".texpack")
+                std::filesystem::recursive_directory_iterator dir(gamedir);
+                std::vector<Lodpack*> lodpacks;
+                for (const std::filesystem::directory_entry& entry : dir)
                 {
-                    Texpack* pack = new Texpack(entry.path().string());
-                    texpacks.push_back(pack);
+                    if (entry.path().extension().string() == ".lodpack")
+                    {
+                        Lodpack* pack = new Lodpack(entry.path().string());
+                        lodpacks.push_back(pack);
+                    }
+                }
+                if (lodpacks.size() < 1)
+                {
+                    Utils::Logger::Error("\nspecified gamedir(including sub-directories) doesn't contain any .lodpack files, export failed");
+                    return -1;
+                }
+                if (ExportAllSkinnedMesh(wad, lodpacks, outpath) && ExportAllRigidMesh(wad, lodpacks, outpath))
+                {
+                    Utils::Logger::Success(("\nSuccessfully exported all meshes to: " + outpath.string()).c_str());
+                }
+                else
+                {
+                    Utils::Logger::Error("\nMeshes export Failed.");
+                }
+
+                for (auto& pack : lodpacks)
+                {
+                    delete pack;
                 }
             }
-            if (texpacks.size() < 1)
+            if (texture)
             {
-                Utils::Logger::Error("\nspecified gamedir(including sub-directories) doesn't contain any .texpack files, export failed");
-                return -1;
+                std::filesystem::recursive_directory_iterator dir(gamedir);
+                std::vector<Texpack*> texpacks;
+                for (const std::filesystem::directory_entry& entry : dir)
+                {
+                    if (entry.path().extension().string() == ".texpack")
+                    {
+                        Texpack* pack = new Texpack(entry.path().string());
+                        texpacks.push_back(pack);
+                    }
+                }
+                if (texpacks.size() < 1)
+                {
+                    Utils::Logger::Error("\nspecified gamedir(including sub-directories) doesn't contain any .texpack files, export failed");
+                    return -1;
+                }
+                if (ExportAllTextures(wad, texpacks, outpath, dds))
+                {
+                    Utils::Logger::Success(("\nSuccessfully exported all textures to: " + outpath.string()).c_str());
+                }
+                else
+                {
+                    Utils::Logger::Error("\nTextures export Failed.");
+                }
+                for (auto& pack : texpacks)
+                {
+                    delete pack;
+                }
             }
-            if (ExportAllTextures(wad, texpacks, outdir,dds))
+        };
+
+        if (all)
+        {
+            std::filesystem::recursive_directory_iterator dir(gamedir);
+            for (const std::filesystem::directory_entry& entry : dir)
             {
-                Utils::Logger::Success(("\nSuccessfully exported all textures to: " + outdir.string()).c_str());
-            }
-            else
-            {
-                Utils::Logger::Error("\nTextures export Failed.");
+                if (entry.path().extension().string() == ".wad")
+                {
+                    cout << "process " << entry.path() << std::endl;
+                    ExtractWad(entry.path());
+                }
             }
         }
+        else
+        {
+            ExtractWad(path);
+        }
+
+        cout << "Finished!" << std::endl;
+       
         return 0;
     }
     else if (command == "texpack")
@@ -846,6 +884,7 @@ int main(int argc, char* argv[])
             cout << "  GOWTool settings [options]\n";
             cout << "\nOptions:\n";
             cout << "  -g, --gamedir <gamedir>  Input path to the God of War gamefiles directory\n";
+            cout << "  -o, --outdir <gamedir>  Output path to place extracted files\n";
         };
         if (argc < 3)
         {
@@ -875,6 +914,20 @@ int main(int argc, char* argv[])
                     return -1;
                 }
             }
+            else if (op == "-o" || op == "--outdir")
+            {
+                if (argc > (i + 1))
+                {
+                    outdir = std::filesystem::path(argv[i + 1]);
+                    i++;
+                }
+                else
+                {
+                    Utils::Logger::Error("\nRequired argument missing for option: -o");
+                    LogHelp();
+                    return -1;
+                }
+            }
             else
             {
                 Utils::Logger::Error(("\nInvalid option or argument: " + op).c_str());
@@ -891,7 +944,21 @@ int main(int argc, char* argv[])
         if (WritePrivateProfileStringA("Settings", "Gamedir", gamedir.string().c_str(), configpath.string().c_str()))
         {
             Utils::Logger::Success("\nGamedir Updated");
-            return 0;
+        }
+        if (!outdir.empty())
+        {
+            if (!outdir.is_absolute() || !std::filesystem::exists(outdir) || !std::filesystem::is_directory(outdir))
+            {
+                Utils::Logger::Error(("\nInvalid outdir specified: " + outdir.string()).c_str());
+                LogHelp();
+                return -1;
+            }
+
+            if (WritePrivateProfileStringA("Settings", "Outdir", outdir.string().c_str(), configpath.string().c_str()))
+            {
+                Utils::Logger::Success("\Outdir Updated");
+                return 0;
+            }
         }
     }
     else

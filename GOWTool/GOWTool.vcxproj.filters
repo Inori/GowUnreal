@@ -66,7 +66,7 @@
     <ClInclude Include="inc\krak.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="inc\Lodpak.h">
+    <ClInclude Include="inc\Lodpack.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="inc\MainFunctions.h">

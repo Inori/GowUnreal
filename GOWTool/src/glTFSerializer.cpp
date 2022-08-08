@@ -26,6 +26,17 @@ public:
         assert(m_pathBase.has_root_path());
     }
 
+    ~StreamWriter() 
+    {
+        for (auto& stream : m_streams)
+        {
+            if (stream->is_open())
+            {
+                stream->close();
+            }
+        }
+        m_streams.clear();
+    }
     // Resolves the relative URIs of any external resources declared in the glTF manifest
     std::shared_ptr<std::ostream> GetOutputStream(const std::string& filename) const override
     {
@@ -43,14 +54,18 @@ public:
         // Check if the stream has no errors and is ready for I/O operations
         if (!stream || !(*stream))
         {
+            cout << "open stream failed for reason " << errno << '\n';
             throw std::runtime_error("Unable to create a valid output stream for uri: " + filename);
         }
+
+        m_streams.push_back(stream);
 
         return stream;
     }
 
 private:
     std::filesystem::path m_pathBase;
+    mutable std::vector<std::shared_ptr<std::ofstream>> m_streams;
 };
 auto AddMesh(Document& document, BufferBuilder& bufferBuilder, const RawMeshContainer& expMesh, bool Skinned)
 {

@@ -1,5 +1,5 @@
 #include "pch.h"
-#include "Lodpak.h"
+#include "Lodpack.h"
 
 Lodpack::Lodpack(std::string filename)
 {
@@ -40,6 +40,12 @@ Lodpack::Lodpack(std::string filename)
 		file.seekg(4, std::ios::cur);
 	}
 }
+
+Lodpack::~Lodpack()
+{
+	file.close();
+}
+
 bool Lodpack::GetBuffer(uint64_t& Hash, std::stringstream& outstream)
 {
 	outstream.str("");

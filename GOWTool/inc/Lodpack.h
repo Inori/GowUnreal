@@ -17,5 +17,6 @@ class Lodpack
 public:
 	ifstream file;
 	Lodpack(string filename);
+	~Lodpack();
 	bool GetBuffer(uint64_t& Hash, std::stringstream& outstream);
 };

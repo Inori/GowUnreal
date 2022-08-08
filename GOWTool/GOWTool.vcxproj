@@ -172,7 +172,7 @@
     <ClInclude Include="inc\glTFSerializer.h" />
     <ClInclude Include="inc\gnf.h" />
     <ClInclude Include="inc\krak.h" />
-    <ClInclude Include="inc\Lodpak.h" />
+    <ClInclude Include="inc\Lodpack.h" />
     <ClInclude Include="inc\MainFunctions.h" />
     <ClInclude Include="inc\MathFunctions.h" />
     <ClInclude Include="inc\Mesh.h" />

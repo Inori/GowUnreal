@@ -37,7 +37,7 @@ namespace Utils
 		CONSOLE_SCREEN_BUFFER_INFO csbi;
 		GetConsoleScreenBufferInfo(hndl, &csbi);
 		SetConsoleTextAttribute(hndl, 2);
-		cout << msg;
+		cout << msg << std::endl;
 		SetConsoleTextAttribute(hndl, csbi.wAttributes);
 	}
 	void Logger::Warning(const char* msg)
