@@ -462,6 +462,34 @@ void PrintHelp()
     cout << "\nOptions:\n";
     cout << "  -h, --help  Show help and usage information.\n";
 }
+
+std::vector<std::string> ParseListFile(const std::string& listfile)
+{
+    std::vector<std::string> result;
+    do 
+    {
+        if (!std::filesystem::exists(listfile) || !std::filesystem::is_regular_file(listfile))
+        {
+            break;
+        }
+
+        std::ifstream fin(listfile, ios::in);
+        if (!fin.is_open())
+        {
+            break;
+        }
+
+        for (std::string line; std::getline(fin, line); )
+        {
+            result.push_back(line);
+        }
+
+        fin.close();
+    } while (false);
+
+    return result;
+}
+
 int main(int argc, char* argv[])
 {
     if (argc < 2)
@@ -513,6 +541,7 @@ int main(int argc, char* argv[])
             return -1;
         }
         std::filesystem::path path;
+        std::vector<std::string> wadlist;
         bool mesh = false;
         bool texture = false;
         bool extract = false;
@@ -554,6 +583,20 @@ int main(int argc, char* argv[])
                     return -1;
                 }
             }
+            else if (op == "-l" || op == "--listfile")
+            {
+                if (argc > (i + 1))
+                {
+                    wadlist = ParseListFile(argv[i + 1]);
+                    i++;
+                }
+                else
+                {
+                    Utils::Logger::Error("\nRequired argument missing for option: -l");
+                    LogHelp();
+                    return -1;
+                }
+            }
             else if (op == "-e" || op == "--extract")
             {
                 extract = true;
@@ -587,7 +630,7 @@ int main(int argc, char* argv[])
             LogHelp();
             return -1;
         }
-        if (!all && 
+        if (!all && wadlist.empty() && 
             (path.empty() || !path.is_absolute() || !std::filesystem::exists(path) || !std::filesystem::is_regular_file(path) || path.extension().string() != ".wad"))
         {
             Utils::Logger::Error(("\nInvalid/Unspecified .wad file path: " + path.string()).c_str());
@@ -693,7 +736,19 @@ int main(int argc, char* argv[])
             }
         };
 
-        if (all)
+        if (!wadlist.empty())
+        {
+            for (const auto& fullname : wadlist)
+            {
+                std::filesystem::path path(fullname);
+                if (path.extension().string() == ".wad")
+                {
+                    cout << "process " << path << std::endl;
+                    ExtractWad(path);
+                }
+            }
+        }
+        else if (all)
         {
             std::filesystem::recursive_directory_iterator dir(gamedir);
             for (const std::filesystem::directory_entry& entry : dir)
