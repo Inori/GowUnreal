@@ -2,6 +2,7 @@
 #include "spdlog/spdlog.h"
 #include "spdlog/sinks/stdout_color_sinks.h"
 #include "spdlog/sinks/basic_file_sink.h"
+#include "spdlog/sinks/msvc_sink.h"
 #include "detours.h"
 #include <string>
 #include <set>
@@ -54,7 +55,7 @@ HANDLE WINAPI NewCreateFileW(
 
 		if (s_nameSet.find(fileName) == s_nameSet.end())
 		{
-			auto logger = spdlog::get("file_logger");
+			auto logger = spdlog::get("gow-logger");
 			if (logger)
 			{
 				logger->info(L"{}", fileName);
@@ -72,9 +73,14 @@ HANDLE WINAPI NewCreateFileW(
 
 void InitProc()
 {
-	auto logger = spdlog::basic_logger_mt("file_logger", "basic-log.txt", true);
+	auto msvc_sink = std::make_shared<spdlog::sinks::msvc_sink_mt>();
+	auto file_sink = std::make_shared<spdlog::sinks::basic_file_sink_mt>("gow-log.txt", true);
+	spdlog::sinks_init_list sink_list = { file_sink, msvc_sink };
+
+	auto logger = std::make_shared<spdlog::logger>("gow-logger", sink_list.begin(), sink_list.end());
 	spdlog::set_default_logger(logger);
 	spdlog::flush_on(spdlog::level::info);
+	spdlog::set_pattern("[Asuka] [%t] %v");
 
     DetourTransactionBegin();
     DetourUpdateThread(GetCurrentThread());
