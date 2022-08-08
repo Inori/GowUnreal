@@ -1,0 +1,37 @@
+BasedOnStyle: LLVM
+
+AccessModifierOffset: -4
+AlignConsecutiveAssignments: true
+AlignConsecutiveMacros: true
+AllowAllArgumentsOnNextLine: false
+AllowShortFunctionsOnASingleLine: None
+AllowShortCaseLabelsOnASingleLine: true
+
+AlignConsecutiveDeclarations: true
+BinPackParameters: false
+
+AlwaysBreakTemplateDeclarations: Yes
+BreakBeforeBraces: Allman
+BreakConstructorInitializers: AfterColon
+BreakInheritanceList: AfterColon
+Cpp11BracedListStyle: false
+PointerAlignment: Left
+SpacesBeforeTrailingComments: 2
+NamespaceIndentation: All
+
+UseTab: ForContinuationAndIndentation
+IndentWidth: 4
+TabWidth: 4
+IndentCaseBlocks: false
+IndentCaseLabels: true
+
+ColumnLimit: 0
+SortIncludes: true
+IncludeBlocks: Regroup
+IncludeCategories:
+  - Regex:           '^"(\.\.|Platform|Emulator|Graphic|Loader|Algorithm|Util|Sce|Gnm|Gcn|SpirV|Violet|SceModules)/'
+    Priority:        2
+  - Regex:           '^(<|"(gtest|gmock|isl|json)/)'
+    Priority:        3
+  - Regex:           '.*'
+    Priority:        1
