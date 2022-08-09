@@ -1,0 +1,103 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;c++;cppm;ixx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;h++;hm;inl;inc;ipp;xsd</Extensions>
+    </Filter>
+    <Filter Include="Header Files\replay">
+      <UniqueIdentifier>{ba8f3ded-938b-4e19-bd44-5707322c08dc}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Main.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GowReplay.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="replay\apidefs.h">
+      <Filter>Header Files\replay</Filter>
+    </ClInclude>
+    <ClInclude Include="replay\capture_options.h">
+      <Filter>Header Files\replay</Filter>
+    </ClInclude>
+    <ClInclude Include="replay\common_pipestate.h">
+      <Filter>Header Files\replay</Filter>
+    </ClInclude>
+    <ClInclude Include="replay\control_types.h">
+      <Filter>Header Files\replay</Filter>
+    </ClInclude>
+    <ClInclude Include="replay\d3d11_pipestate.h">
+      <Filter>Header Files\replay</Filter>
+    </ClInclude>
+    <ClInclude Include="replay\d3d12_pipestate.h">
+      <Filter>Header Files\replay</Filter>
+    </ClInclude>
+    <ClInclude Include="replay\data_types.h">
+      <Filter>Header Files\replay</Filter>
+    </ClInclude>
+    <ClInclude Include="replay\gl_pipestate.h">
+      <Filter>Header Files\replay</Filter>
+    </ClInclude>
+    <ClInclude Include="replay\pipestate.h">
+      <Filter>Header Files\replay</Filter>
+    </ClInclude>
+    <ClInclude Include="replay\rdcarray.h">
+      <Filter>Header Files\replay</Filter>
+    </ClInclude>
+    <ClInclude Include="replay\rdcdatetime.h">
+      <Filter>Header Files\replay</Filter>
+    </ClInclude>
+    <ClInclude Include="replay\rdcflatmap.h">
+      <Filter>Header Files\replay</Filter>
+    </ClInclude>
+    <ClInclude Include="replay\rdcpair.h">
+      <Filter>Header Files\replay</Filter>
+    </ClInclude>
+    <ClInclude Include="replay\rdcstr.h">
+      <Filter>Header Files\replay</Filter>
+    </ClInclude>
+    <ClInclude Include="replay\renderdoc_replay.h">
+      <Filter>Header Files\replay</Filter>
+    </ClInclude>
+    <ClInclude Include="replay\replay_enums.h">
+      <Filter>Header Files\replay</Filter>
+    </ClInclude>
+    <ClInclude Include="replay\resourceid.h">
+      <Filter>Header Files\replay</Filter>
+    </ClInclude>
+    <ClInclude Include="replay\shader_types.h">
+      <Filter>Header Files\replay</Filter>
+    </ClInclude>
+    <ClInclude Include="replay\stringise.h">
+      <Filter>Header Files\replay</Filter>
+    </ClInclude>
+    <ClInclude Include="replay\structured_data.h">
+      <Filter>Header Files\replay</Filter>
+    </ClInclude>
+    <ClInclude Include="replay\version.h">
+      <Filter>Header Files\replay</Filter>
+    </ClInclude>
+    <ClInclude Include="replay\vk_pipestate.h">
+      <Filter>Header Files\replay</Filter>
+    </ClInclude>
+    <ClInclude Include="GowReplay.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="replay\pipestate.inl">
+      <Filter>Header Files\replay</Filter>
+    </None>
+    <None Include="replay\renderdoc_tostr.inl">
+      <Filter>Header Files\replay</Filter>
+    </None>
+  </ItemGroup>
+</Project>
