@@ -1,9 +1,9 @@
 #pragma once
 
-#include <string>
+#define RENDERDOC_PLATFORM_WIN32
+#include "renderdoc_replay.h"
 
-struct ICaptureFile;
-struct IReplayController;
+#include <string>
 
 class GowReplayer
 {
@@ -19,6 +19,9 @@ private:
 
 	bool captureLoad(const std::string& capFile);
 	void captureUnload();
+
+	void processActions();
+	void iterAction(const ActionDescription& act);
 
 private:
 	ICaptureFile*      m_cap        = nullptr;

@@ -71,11 +71,11 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>$(ProjectDir)replay\include;$(ProjectDir)fbxsdk\include;$(IncludePath)</IncludePath>
+    <IncludePath>$(ProjectDir)replay\include;$(ProjectDir)fbxsdk\include;$(ProjectDir)fmt\include;$(IncludePath)</IncludePath>
     <LibraryPath>$(ProjectDir)replay\lib;$(ProjectDir)fbxsdk\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <IncludePath>$(ProjectDir)replay\include;$(ProjectDir)fbxsdk\include;$(IncludePath)</IncludePath>
+    <IncludePath>$(ProjectDir)replay\include;$(ProjectDir)fbxsdk\include;$(ProjectDir)fmt\include;$(IncludePath)</IncludePath>
     <LibraryPath>$(ProjectDir)replay\lib;$(ProjectDir)fbxsdk\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -113,6 +113,7 @@
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -129,6 +130,7 @@
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -139,37 +141,42 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="fmt\src\format.cc" />
+    <ClCompile Include="fmt\src\os.cc" />
     <ClCompile Include="GowReplayer.cpp" />
+    <ClCompile Include="Log.cpp" />
     <ClCompile Include="Main.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="fbxsdk\include\fbxsdk.h" />
     <ClInclude Include="GowReplayer.h" />
-    <ClInclude Include="replay\apidefs.h" />
-    <ClInclude Include="replay\capture_options.h" />
-    <ClInclude Include="replay\common_pipestate.h" />
-    <ClInclude Include="replay\control_types.h" />
-    <ClInclude Include="replay\d3d11_pipestate.h" />
-    <ClInclude Include="replay\d3d12_pipestate.h" />
-    <ClInclude Include="replay\data_types.h" />
-    <ClInclude Include="replay\gl_pipestate.h" />
-    <ClInclude Include="replay\pipestate.h" />
-    <ClInclude Include="replay\rdcarray.h" />
-    <ClInclude Include="replay\rdcdatetime.h" />
-    <ClInclude Include="replay\rdcflatmap.h" />
-    <ClInclude Include="replay\rdcpair.h" />
-    <ClInclude Include="replay\rdcstr.h" />
-    <ClInclude Include="replay\renderdoc_replay.h" />
-    <ClInclude Include="replay\replay_enums.h" />
-    <ClInclude Include="replay\resourceid.h" />
-    <ClInclude Include="replay\shader_types.h" />
-    <ClInclude Include="replay\stringise.h" />
-    <ClInclude Include="replay\structured_data.h" />
-    <ClInclude Include="replay\version.h" />
-    <ClInclude Include="replay\vk_pipestate.h" />
+    <ClInclude Include="Log.h" />
+    <ClInclude Include="replay\include\apidefs.h" />
+    <ClInclude Include="replay\include\capture_options.h" />
+    <ClInclude Include="replay\include\common_pipestate.h" />
+    <ClInclude Include="replay\include\control_types.h" />
+    <ClInclude Include="replay\include\d3d11_pipestate.h" />
+    <ClInclude Include="replay\include\d3d12_pipestate.h" />
+    <ClInclude Include="replay\include\data_types.h" />
+    <ClInclude Include="replay\include\gl_pipestate.h" />
+    <ClInclude Include="replay\include\pipestate.h" />
+    <ClInclude Include="replay\include\rdcarray.h" />
+    <ClInclude Include="replay\include\rdcdatetime.h" />
+    <ClInclude Include="replay\include\rdcflatmap.h" />
+    <ClInclude Include="replay\include\rdcpair.h" />
+    <ClInclude Include="replay\include\rdcstr.h" />
+    <ClInclude Include="replay\include\renderdoc_replay.h" />
+    <ClInclude Include="replay\include\replay_enums.h" />
+    <ClInclude Include="replay\include\resourceid.h" />
+    <ClInclude Include="replay\include\shader_types.h" />
+    <ClInclude Include="replay\include\stringise.h" />
+    <ClInclude Include="replay\include\structured_data.h" />
+    <ClInclude Include="replay\include\version.h" />
+    <ClInclude Include="replay\include\vk_pipestate.h" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="replay\pipestate.inl" />
-    <None Include="replay\renderdoc_tostr.inl" />
+    <None Include="replay\include\pipestate.inl" />
+    <None Include="replay\include\renderdoc_tostr.inl" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

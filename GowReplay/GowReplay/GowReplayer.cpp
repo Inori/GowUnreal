@@ -1,7 +1,5 @@
 #include "GowReplayer.h"
-
-#define RENDERDOC_PLATFORM_WIN32
-#include "renderdoc_replay.h"
+#include "Log.h"
 
 #include <thread>
 #include <chrono>
@@ -22,7 +20,7 @@ void GowReplayer::replay(const std::string& capFile)
 {
 	captureLoad(capFile);
 
-
+	processActions();
 
 	captureUnload();
 }
@@ -68,6 +66,12 @@ bool GowReplayer::captureLoad(const std::string& capFile)
 
 		ret  = true;
 	}while(false);
+
+	if (!ret)
+	{
+		LOG_DEBUG("open capture failed: {}", capFile);
+	}
+
 	return ret;
 }
 
@@ -83,5 +87,23 @@ void GowReplayer::captureUnload()
 	{
 		m_cap->Shutdown();
 		m_cap = nullptr;
+	}
+}
+
+void GowReplayer::processActions()
+{
+	const auto& actionList = m_player->GetRootActions();
+	for (const auto& act : actionList)
+	{
+		iterAction(act);
+	}
+}
+
+void GowReplayer::iterAction(const ActionDescription& act)
+{
+
+	for (const auto& child : act.children)
+	{
+		iterAction(child);
 	}
 }
