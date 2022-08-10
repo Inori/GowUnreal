@@ -71,10 +71,12 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>$(ProjectDir)replay;$(IncludePath)</IncludePath>
+    <IncludePath>$(ProjectDir)replay\include;$(ProjectDir)fbxsdk\include;$(IncludePath)</IncludePath>
+    <LibraryPath>$(ProjectDir)replay\lib;$(ProjectDir)fbxsdk\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <IncludePath>$(ProjectDir)replay;$(IncludePath)</IncludePath>
+    <IncludePath>$(ProjectDir)replay\include;$(ProjectDir)fbxsdk\include;$(IncludePath)</IncludePath>
+    <LibraryPath>$(ProjectDir)replay\lib;$(ProjectDir)fbxsdk\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>

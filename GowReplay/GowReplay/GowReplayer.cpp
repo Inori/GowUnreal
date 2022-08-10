@@ -22,6 +22,8 @@ void GowReplayer::replay(const std::string& capFile)
 {
 	captureLoad(capFile);
 
+
+
 	captureUnload();
 }
 
