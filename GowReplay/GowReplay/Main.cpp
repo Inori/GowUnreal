@@ -1,7 +1,10 @@
-#include "GowReplay.h"
+#include "GowReplayer.h"
 
-int main()
+int main(int argc, char* argv[])
 {
-	GowReplay replay;
+	GowReplayer replayer;
+
+	replayer.replay(argv[1]);
+
 	return 0;
 }

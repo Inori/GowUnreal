@@ -137,11 +137,11 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="GowReplay.cpp" />
+    <ClCompile Include="GowReplayer.cpp" />
     <ClCompile Include="Main.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="GowReplay.h" />
+    <ClInclude Include="GowReplayer.h" />
     <ClInclude Include="replay\apidefs.h" />
     <ClInclude Include="replay\capture_options.h" />
     <ClInclude Include="replay\common_pipestate.h" />

@@ -17,7 +17,7 @@
     <ClCompile Include="Main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="GowReplay.cpp">
+    <ClCompile Include="GowReplayer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -88,7 +88,7 @@
     <ClInclude Include="replay\vk_pipestate.h">
       <Filter>Header Files\replay</Filter>
     </ClInclude>
-    <ClInclude Include="GowReplay.h">
+    <ClInclude Include="GowReplayer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
