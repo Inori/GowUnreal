@@ -69,7 +69,7 @@ bool GowReplayer::captureLoad(const std::string& capFile)
 
 	if (!ret)
 	{
-		LOG_DEBUG("open capture failed: {}", capFile);
+		LOG_ERR("open capture failed: {}", capFile);
 	}
 
 	return ret;
@@ -101,6 +101,8 @@ void GowReplayer::processActions()
 
 void GowReplayer::iterAction(const ActionDescription& act)
 {
+	auto name = act.GetName(m_player->GetStructuredFile()).c_str();
+	LOG_DEBUG("EID: {} Name: {}", act.eventId, name);
 
 	for (const auto& child : act.children)
 	{

@@ -27,7 +27,7 @@ void vlog(const char* level, const char* function, int line, fmt::string_view fo
 {
 	auto tid     = getTid();
 	auto message = fmt::vformat(format, args);
-	auto log     = fmt::format("{}:{}:{}:{}:{:04d}:{}",
+	auto log     = fmt::format("{}:{}:{}:{}:{:04d}:{}\n",
 							   LOG_TAG,
 							   level,
 							   tid,
@@ -40,7 +40,7 @@ void vlog(const char* level, const char* function, int line, fmt::string_view fo
 void vassert(const char* expression, const char* function, const char* sourcePath, int line, fmt::string_view format, fmt::format_args args)
 {
 	auto message = fmt::vformat(format, args);
-	auto log     = fmt::format("[Assert]: {}\n[Cause]: {}\n[Path]: {}({}): {}",
+	auto log     = fmt::format("[Assert]: {}\n[Cause]: {}\n[Path]: {}({}): {}\n",
 							   expression,
 							   message,
 							   sourcePath,
