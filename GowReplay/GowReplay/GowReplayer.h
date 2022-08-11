@@ -24,7 +24,7 @@ private:
 	void iterAction(const ActionDescription& act);
 
 private:
-	ICaptureFile*      m_cap        = nullptr;
+	ICaptureFile*      m_cap    = nullptr;
 	IReplayController* m_player = nullptr;
 };
 

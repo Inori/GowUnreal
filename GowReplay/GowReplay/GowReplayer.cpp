@@ -41,6 +41,8 @@ bool GowReplayer::captureLoad(const std::string& capFile)
 	bool ret = false;
 	do
 	{
+		LOG_DEBUG("loading capture file: {}", capFile);
+
 		m_cap = RENDERDOC_OpenCaptureFile();
 		if (!m_cap)
 		{
@@ -103,6 +105,7 @@ void GowReplayer::iterAction(const ActionDescription& act)
 {
 	auto name = act.GetName(m_player->GetStructuredFile()).c_str();
 	LOG_DEBUG("EID: {} Name: {}", act.eventId, name);
+
 
 	for (const auto& child : act.children)
 	{
