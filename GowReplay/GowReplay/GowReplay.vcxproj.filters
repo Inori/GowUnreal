@@ -35,6 +35,9 @@
     <ClCompile Include="fmt\src\os.cc">
       <Filter>Source Files\fmt</Filter>
     </ClCompile>
+    <ClCompile Include="FbxBuilder.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="GowReplayer.h">
@@ -112,12 +115,15 @@
     <ClInclude Include="Log.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="FbxBuilder.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="replay\include\pipestate.inl">
+    <None Include="replay\include\renderdoc_tostr.inl">
       <Filter>Header Files\replay</Filter>
     </None>
-    <None Include="replay\include\renderdoc_tostr.inl">
+    <None Include="replay\include\pipestate.inl">
       <Filter>Header Files\replay</Filter>
     </None>
   </ItemGroup>

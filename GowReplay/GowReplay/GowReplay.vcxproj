@@ -71,11 +71,11 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>$(ProjectDir)replay\include;$(ProjectDir)fbxsdk\include;$(ProjectDir)fmt\include;$(IncludePath)</IncludePath>
+    <IncludePath>$(ProjectDir)replay\include;$(ProjectDir)fbxsdk\include;$(ProjectDir)fmt\include;$(ProjectDir)glm;$(IncludePath)</IncludePath>
     <LibraryPath>$(ProjectDir)replay\lib;$(ProjectDir)fbxsdk\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <IncludePath>$(ProjectDir)replay\include;$(ProjectDir)fbxsdk\include;$(ProjectDir)fmt\include;$(IncludePath)</IncludePath>
+    <IncludePath>$(ProjectDir)replay\include;$(ProjectDir)fbxsdk\include;$(ProjectDir)fmt\include;$(ProjectDir)glm;$(IncludePath)</IncludePath>
     <LibraryPath>$(ProjectDir)replay\lib;$(ProjectDir)fbxsdk\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -118,7 +118,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>renderdoc.lib;libfbxsdk-mtd.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>renderdoc.lib;libfbxsdk-mtd.lib;libxml2-mtd.lib;zlib-mtd.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -137,10 +137,11 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>renderdoc.lib;libfbxsdk-mt.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>renderdoc.lib;libfbxsdk-mt.lib;libxml2-mt.lib;zlib-mt.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="FbxBuilder.cpp" />
     <ClCompile Include="fmt\src\format.cc" />
     <ClCompile Include="fmt\src\os.cc" />
     <ClCompile Include="GowReplayer.cpp" />
@@ -149,6 +150,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="fbxsdk\include\fbxsdk.h" />
+    <ClInclude Include="FbxBuilder.h" />
     <ClInclude Include="GowReplayer.h" />
     <ClInclude Include="Log.h" />
     <ClInclude Include="replay\include\apidefs.h" />
