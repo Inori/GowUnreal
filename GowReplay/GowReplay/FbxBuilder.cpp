@@ -79,7 +79,7 @@ void FbxBuilder::build(const std::string& filename)
 	}
 
 	FbxManager::GetFileFormatVersion(lMajor, lMinor, lRevision);
-	LOG_TRACE("FBX file format version %d.%d.%d\n\n", lMajor, lMinor, lRevision);
+	LOG_TRACE("FBX file format version {}.{}.{}\n\n", lMajor, lMinor, lRevision);
 
 	// Export the scene.
 	lStatus = lExporter->Export(m_scene);
@@ -157,4 +157,9 @@ void FbxBuilder::destroySdkObjects()
 		m_manager->Destroy();
 		m_manager = nullptr;
 	}
+}
+
+bool MeshObject::isValid()
+{
+	return !position.empty();
 }

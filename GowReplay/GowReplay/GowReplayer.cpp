@@ -163,7 +163,10 @@ void GowReplayer::extractMesh(const ActionDescription& act)
 
 	LOG_TRACE("Add mesh from event {}", act.eventId);
 	auto mesh = buildMeshObject(act);
-	m_fbx.addMesh(mesh);
+	if (mesh.isValid())
+	{
+		m_fbx.addMesh(mesh);
+	}
 }
 
 std::vector<MeshData> GowReplayer::getMeshInputs(const ActionDescription& act)
@@ -259,11 +262,16 @@ MeshObject GowReplayer::buildMeshObject(const ActionDescription& act)
 	MeshObject mesh;
 
 	auto meshAttrs = getMeshInputs(act);
+	if (meshAttrs.empty())
+	{
+		// in case the mesh has already been added.
+		return mesh;
+	}
 
 	mesh.name    = fmt::format("EID_{}", act.eventId);
 	mesh.indices = getIndices(meshAttrs.front());
 
-	// cache the vertex buffer to prevent re-fetching for every attribute for every index
+	// cache the vertex buffer
 	std::map<ResourceId, bytebuf> vtxCache;
 	for (const auto& attr : meshAttrs)
 	{
