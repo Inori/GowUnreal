@@ -110,8 +110,8 @@ FbxNode* FbxBuilder::createMesh(const MeshObject& mesh)
 
 		for (int v = 0; v < 3; v++)
 		{
-			//lMesh->AddPolygon(mesh.indices[vId++]);
-			lMesh->AddPolygon(vId++);
+			lMesh->AddPolygon(mesh.indices[vId++]);
+			//lMesh->AddPolygon(vId++);
 		}
 			
 		lMesh->EndPolygon();

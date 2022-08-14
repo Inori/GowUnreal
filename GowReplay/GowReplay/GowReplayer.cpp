@@ -109,33 +109,32 @@ void GowReplayer::captureUnload()
 	}
 }
 
-bool stop = false;
-
 void GowReplayer::processActions()
 {
+	m_player->AddFakeMarkers();
+
 	const auto& actionList = m_player->GetRootActions();
 	for (const auto& act : actionList)
 	{
 		iterAction(act);
-
-		if (stop)
-		{
-			return;
-		}
 	}
 }
 
 void GowReplayer::iterAction(const ActionDescription& act)
 {
-	auto name = act.GetName(m_player->GetStructuredFile()).c_str();
+	std::string name = act.GetName(m_player->GetStructuredFile()).c_str();
 	LOG_DEBUG("Process EID: {} Name: {}", act.eventId, name);
 
-	extractResource(act);
-
-	if (stop)
+	if (act.IsFakeMarker())
 	{
-		return;
+		// Do not process depth only pass
+		if (name.find("Depth-only") != std::string::npos)
+		{
+			return;
+		}
 	}
+
+	extractResource(act);
 
 	for (const auto& child : act.children)
 	{
@@ -145,6 +144,11 @@ void GowReplayer::iterAction(const ActionDescription& act)
 
 void GowReplayer::extractResource(const ActionDescription& act)
 {
+	if (act.IsFakeMarker())
+	{
+		return;
+	}
+
 	extractMesh(act);
 }
 
@@ -157,10 +161,9 @@ void GowReplayer::extractMesh(const ActionDescription& act)
 
 	m_player->SetFrameEvent(act.eventId, true);
 
+	LOG_TRACE("Add mesh from event {}", act.eventId);
 	auto mesh = buildMeshObject(act);
 	m_fbx.addMesh(mesh);
-
-	stop = true;
 }
 
 std::vector<MeshData> GowReplayer::getMeshInputs(const ActionDescription& act)
@@ -267,21 +270,22 @@ MeshObject GowReplayer::buildMeshObject(const ActionDescription& act)
 		vtxCache[attr.vertexResourceId] = m_player->GetBufferData(attr.vertexResourceId, 0, 0);
 	}
 
-	for (auto idx : mesh.indices)
+	for (const auto& attr : meshAttrs)
 	{
-		for (const auto& attr : meshAttrs)
+		if (attr.name != "POSITION")
 		{
-			if (attr.name != "POSITION")
-			{
-				continue;
-			}
+			continue;
+		}
 
-			auto& buffer = vtxCache[attr.vertexResourceId];
-			auto  offset = attr.vertexByteOffset + attr.vertexByteStride * idx;
-
-			uint8_t* data  = &buffer[offset];
+		auto& buffer = vtxCache[attr.vertexResourceId];
+		auto  offset = attr.vertexByteOffset;
+		auto  stride = attr.vertexByteStride;
+		auto  count  = buffer.size() / stride;
+		for (size_t i = 0; i != count; ++i)
+		{
+			uint8_t* data  = &buffer[offset + i * stride];
 			auto     value = unpackData(attr.format, data);
-			
+
 			glm::vec3 vtx(value[0], value[1], value[2]);
 			mesh.position.push_back(vtx);
 		}
