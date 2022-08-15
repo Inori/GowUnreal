@@ -169,7 +169,7 @@ void GowReplayer::extractMesh(const ActionDescription& act)
 	}
 }
 
-std::vector<MeshData> GowReplayer::getMeshInputs(const ActionDescription& act)
+std::vector<MeshData> GowReplayer::getMeshAttributes(const ActionDescription& act)
 {
 	std::vector<MeshData> result;
 
@@ -223,7 +223,7 @@ std::vector<MeshData> GowReplayer::getMeshInputs(const ActionDescription& act)
 	return result;
 }
 
-std::vector<uint32_t> GowReplayer::getIndices(const MeshData& mesh)
+std::vector<uint32_t> GowReplayer::getMeshIndices(const MeshData& mesh)
 {
 	std::vector<uint32_t> result(mesh.numIndices);
 
@@ -257,19 +257,80 @@ std::vector<uint32_t> GowReplayer::getIndices(const MeshData& mesh)
 	return result;
 }
 
+MeshTransform GowReplayer::getMeshTransform(const ActionDescription& act)
+{
+	MeshTransform result = {};
+
+	auto        targets = m_player->GetDisassemblyTargets(true);
+	const auto& format  = targets[0];  // should be DXBC
+
+	const auto& state = m_player->GetPipelineState();
+	auto        pipe  = state.GetGraphicsPipelineObject();
+	auto        entry = state.GetShaderEntryPoint(ShaderStage::Vertex);
+	auto        vs    = state.GetShaderReflection(ShaderStage::Vertex);
+
+	bool     found       = false;
+	uint32_t viewDataIdx = 0;
+	for (const auto& cb : vs->constantBlocks)
+	{
+		if (cb.name.contains("viewData"))
+		{
+			found = true;
+			break;
+		}
+		++viewDataIdx;
+	}
+
+	LOG_ASSERT(found, "can not find viewData. EID {}", act.eventId);
+
+	auto viewDataBuffer = state.GetConstantBuffer(ShaderStage::Vertex, viewDataIdx, 0);
+	auto viewData       = m_player->GetCBufferVariableContents(pipe,
+															   vs->resourceId,
+															   ShaderStage::Vertex,
+															   entry,
+															   viewDataIdx,
+															   viewDataBuffer.resourceId,
+															   0,
+															   0);
+	glm::mat4 matView;
+	for (const auto& var : viewData)
+	{
+		for (const auto& field : var.members)
+		{
+			if (field.name != "view")
+			{
+				continue;
+			}
+
+			for (uint8_t r = 0; r != field.rows; ++r)
+			{
+				for (uint8_t c = 0; c != field.columns; ++c)
+				{
+					matView[r][c] = field.value.f32v[r * field.columns + c];
+				}
+			}
+
+			break;
+		}
+	}
+	
+	return result;
+}
+
 MeshObject GowReplayer::buildMeshObject(const ActionDescription& act)
 {
 	MeshObject mesh;
 
-	auto meshAttrs = getMeshInputs(act);
+	auto meshAttrs = getMeshAttributes(act);
 	if (meshAttrs.empty())
 	{
 		// in case the mesh has already been added.
 		return mesh;
 	}
 
+	mesh.eid     = act.eventId;
 	mesh.name    = fmt::format("EID_{}", act.eventId);
-	mesh.indices = getIndices(meshAttrs.front());
+	mesh.indices = getMeshIndices(meshAttrs.front());
 
 	// cache the vertex buffer
 	std::map<ResourceId, bytebuf> vtxCache;
@@ -298,6 +359,8 @@ MeshObject GowReplayer::buildMeshObject(const ActionDescription& act)
 			mesh.position.push_back(vtx);
 		}
 	}
+
+	mesh.transform = getMeshTransform(act);
 
 	return mesh;
 }

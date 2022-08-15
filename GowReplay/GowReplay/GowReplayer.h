@@ -35,8 +35,9 @@ private:
 	void extractResource(const ActionDescription& act);
 	void extractMesh(const ActionDescription& act);
 
-	std::vector<MeshData> getMeshInputs(const ActionDescription& act);
-	std::vector<uint32_t> getIndices(const MeshData& mesh);
+	std::vector<MeshData> getMeshAttributes(const ActionDescription& act);
+	std::vector<uint32_t> getMeshIndices(const MeshData& mesh);
+	MeshTransform         getMeshTransform(const ActionDescription& act);
 	MeshObject            buildMeshObject(const ActionDescription& act);
 
 	std::vector<float> unpackData(

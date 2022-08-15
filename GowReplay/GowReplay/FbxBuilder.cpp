@@ -8,6 +8,25 @@
 #define IOS_REF (*(m_manager->GetIOSettings()))
 #endif
 
+
+bool MeshTransform::operator==(const MeshTransform& other)
+{
+	return translation == other.translation &&
+		   rotation == other.rotation &&
+		   scaling == other.scaling;
+}
+
+bool MeshObject::isValid()
+{
+	return !position.empty();
+}
+
+bool MeshObject::operator==(const MeshObject& other)
+{
+	return position == other.position &&
+		   transform == other.transform;
+}
+
 FbxBuilder::FbxBuilder()
 {
 	initializeSdkObjects();
@@ -158,7 +177,4 @@ void FbxBuilder::destroySdkObjects()
 	}
 }
 
-bool MeshObject::isValid()
-{
-	return !position.empty();
-}
+
