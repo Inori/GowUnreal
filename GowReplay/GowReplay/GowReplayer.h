@@ -7,6 +7,7 @@
 
 #include <string>
 #include <set>
+#include <optional>
 
 struct MeshData : public MeshFormat
 {
@@ -39,6 +40,9 @@ private:
 	std::vector<uint32_t> getMeshIndices(const MeshData& mesh);
 	MeshTransform         getMeshTransform(const ActionDescription& act);
 	MeshObject            buildMeshObject(const ActionDescription& act);
+
+	std::optional<ShaderVariable> getShaderConstantVariable(
+		ShaderStage stage, const std::string& varName);
 
 	std::vector<float> unpackData(
 		const ResourceFormat& fmt,

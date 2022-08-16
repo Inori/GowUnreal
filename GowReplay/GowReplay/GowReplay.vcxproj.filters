@@ -127,4 +127,8 @@
       <Filter>Header Files\replay</Filter>
     </None>
   </ItemGroup>
+  <ItemGroup>
+    <Natvis Include="glm.natvis" />
+    <Natvis Include="renderdoc.natvis" />
+  </ItemGroup>
 </Project>

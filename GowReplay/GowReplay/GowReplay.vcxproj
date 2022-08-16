@@ -180,6 +180,10 @@
     <None Include="replay\include\pipestate.inl" />
     <None Include="replay\include\renderdoc_tostr.inl" />
   </ItemGroup>
+  <ItemGroup>
+    <Natvis Include="glm.natvis" />
+    <Natvis Include="renderdoc.natvis" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

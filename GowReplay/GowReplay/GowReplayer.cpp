@@ -263,56 +263,68 @@ MeshTransform GowReplayer::getMeshTransform(const ActionDescription& act)
 
 	auto        targets = m_player->GetDisassemblyTargets(true);
 	const auto& format  = targets[0];  // should be DXBC
+	
+	// find ModelView matrix
 
-	const auto& state = m_player->GetPipelineState();
-	auto        pipe  = state.GetGraphicsPipelineObject();
-	auto        entry = state.GetShaderEntryPoint(ShaderStage::Vertex);
-	auto        vs    = state.GetShaderReflection(ShaderStage::Vertex);
+	auto viewData = getShaderConstantVariable(ShaderStage::Vertex, "viewData");
+	LOG_ASSERT(viewData.has_value(), "can not find viewData for EID {}.", act.eventId);
 
-	bool     found       = false;
-	uint32_t viewDataIdx = 0;
-	for (const auto& cb : vs->constantBlocks)
+	glm::mat4 view = {};
+	for (const auto& field : viewData->members)
 	{
-		if (cb.name.contains("viewData"))
+		if (field.name != "view")
 		{
-			found = true;
-			break;
+			continue;
 		}
-		++viewDataIdx;
+
+		for (uint8_t r = 0; r != field.rows; ++r)
+		{
+			for (uint8_t c = 0; c != field.columns; ++c)
+			{
+				view[r][c] = field.value.f32v[r * field.columns + c];
+			}
+		}
+
+		break;
 	}
 
-	LOG_ASSERT(found, "can not find viewData. EID {}", act.eventId);
+	// find model data
 
-	auto viewDataBuffer = state.GetConstantBuffer(ShaderStage::Vertex, viewDataIdx, 0);
-	auto viewData       = m_player->GetCBufferVariableContents(pipe,
-															   vs->resourceId,
-															   ShaderStage::Vertex,
-															   entry,
-															   viewDataIdx,
-															   viewDataBuffer.resourceId,
-															   0,
-															   0);
-	glm::mat4 matView;
-	for (const auto& var : viewData)
+	auto modelData = getShaderConstantVariable(ShaderStage::Vertex, "modelData");
+	LOG_ASSERT(modelData.has_value(), "can not find modelData for EID {}.", act.eventId);
+
+	int       instanceOffset = 0;
+	glm::vec3 quantScale     = { 1.0, 1.0, 1.0 };
+	glm::vec3 quantBias      = { 0.0, 0.0, 0.0 };
+	for (const auto& field : modelData->members)
 	{
-		for (const auto& field : var.members)
+		if (field.name == "instanceOffset")
 		{
-			if (field.name != "view")
-			{
-				continue;
-			}
+			instanceOffset = field.value.s32v[0];
+			continue;
+		}
 
-			for (uint8_t r = 0; r != field.rows; ++r)
+		if (field.name == "quantScale")
+		{
+			for (uint8_t c = 0; c != field.columns; ++c)
 			{
-				for (uint8_t c = 0; c != field.columns; ++c)
-				{
-					matView[r][c] = field.value.f32v[r * field.columns + c];
-				}
+				quantScale[c] = field.value.f32v[c];
 			}
+			continue;
+		}
 
-			break;
+		if (field.name == "quantBias")
+		{
+			for (uint8_t c = 0; c != field.columns; ++c)
+			{
+				quantBias[c] = field.value.f32v[c];
+			}
+			continue;
 		}
 	}
+
+	// find instance data
+
 	
 	return result;
 }
@@ -363,6 +375,48 @@ MeshObject GowReplayer::buildMeshObject(const ActionDescription& act)
 	mesh.transform = getMeshTransform(act);
 
 	return mesh;
+}
+
+std::optional<ShaderVariable> GowReplayer::getShaderConstantVariable(
+	ShaderStage stage, const std::string& varName)
+{
+	std::optional<ShaderVariable> result;
+
+	const auto& state = m_player->GetPipelineState();
+	auto        pipe  = state.GetGraphicsPipelineObject();
+	auto        entry = state.GetShaderEntryPoint(stage);
+	auto        rf    = state.GetShaderReflection(stage);
+
+	auto roResource = state.GetReadOnlyResources(stage);
+	auto rwResource = state.GetReadWriteResources(stage);
+	const auto& bindMapping = state.GetBindpointMapping(stage);
+
+	bool     found  = false;
+	uint32_t varIdx = 0;
+	for (const auto& cb : rf->constantBlocks)
+	{
+		if (cb.name.contains(varName.c_str()))
+		{
+			found = true;
+			break;
+		}
+		++varIdx;
+	}
+
+	LOG_ASSERT(found, "can not find {}.", varName);
+
+	auto varBuffer = state.GetConstantBuffer(stage, varIdx, 0);
+	auto varList   = m_player->GetCBufferVariableContents(pipe,
+														  rf->resourceId,
+														  stage,
+														  entry,
+														  varIdx,
+														  varBuffer.resourceId,
+														  0,
+														  0);
+	LOG_ASSERT(varList.size() == 1, "variable array not supported.");
+	result = varList[0];
+	return result;
 }
 
 std::vector<float> GowReplayer::unpackData(
