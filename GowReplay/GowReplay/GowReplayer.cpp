@@ -17,6 +17,10 @@ rdcstr DoStringise(const uint32_t& el)
 #include <chrono>
 #include <filesystem>
 #include <map>
+#include "gtc/matrix_access.hpp"
+#include "gtc/constants.hpp"
+#include "gtx/euler_angles.hpp"
+
 
 REPLAY_PROGRAM_MARKER();
 
@@ -154,7 +158,10 @@ void GowReplayer::extractResource(const ActionDescription& act)
 
 void GowReplayer::extractMesh(const ActionDescription& act)
 {
-	if (!(act.flags & ActionFlags::Drawcall))
+	// only process DrawIndexedInstanced
+	if (!((act.flags & ActionFlags::Drawcall) && 
+		(act.flags & ActionFlags::Indexed) &&
+		(act.flags & ActionFlags::Instanced)))
 	{
 		return;
 	}
@@ -257,9 +264,9 @@ std::vector<uint32_t> GowReplayer::getMeshIndices(const MeshData& mesh)
 	return result;
 }
 
-MeshTransform GowReplayer::getMeshTransform(const ActionDescription& act)
+std::vector<MeshTransform> GowReplayer::getMeshTransforms(const ActionDescription& act)
 {
-	MeshTransform result = {};
+	std::vector<MeshTransform> instances = {};
 
 	auto        targets = m_player->GetDisassemblyTargets(true);
 	const auto& format  = targets[0];  // should be DXBC
@@ -287,6 +294,8 @@ MeshTransform GowReplayer::getMeshTransform(const ActionDescription& act)
 
 		break;
 	}
+	// we all use multiply on left, so transpose view matrix
+	view = glm::transpose(view);
 
 	// find model data
 
@@ -324,9 +333,37 @@ MeshTransform GowReplayer::getMeshTransform(const ActionDescription& act)
 	}
 
 	// find instance data
+	auto insBufferInfo = getShaderResourceBuffer(ShaderStage::Vertex, "instancingBuffer");
+	LOG_ASSERT(insBufferInfo.id != ResourceId::Null(), "can not find instancingBuffer for EID {}", act.eventId);
 
-	
-	return result;
+	for (uint32_t instanceId = 0; instanceId != act.numInstances; ++instanceId)
+	{
+		uint32_t       instanceIndex = instanceId + instanceOffset;
+		uint32_t       size          = insBufferInfo.format.arrayByteStride;
+		uint32_t       offset        = size * instanceIndex;
+		auto           instanceData  = m_player->GetBufferData(insBufferInfo.id, offset, size);
+		const uint8_t* data          = instanceData.data();
+
+		glm::mat4 insTransform(0);
+		std::memcpy(&insTransform, data, insBufferInfo.format.members[0].type.arrayByteStride);
+		insTransform[3][3] = 1.0;
+
+		// merge instance transform and common transform
+		glm::mat4 modelView = view * insTransform;
+		// merge position bias
+		modelView[0][3] += quantBias[0];
+		modelView[1][3] += quantBias[1];
+		modelView[2][3] += quantBias[2];
+		// merge quant scale
+		modelView[0][0] *= quantScale[0];
+		modelView[1][1] *= quantScale[1];
+		modelView[2][2] *= quantScale[2];
+
+		auto transform = calculateTransform(modelView);
+		instances.push_back(transform);
+	}
+
+	return instances;
 }
 
 MeshObject GowReplayer::buildMeshObject(const ActionDescription& act)
@@ -372,13 +409,13 @@ MeshObject GowReplayer::buildMeshObject(const ActionDescription& act)
 		}
 	}
 
-	mesh.transform = getMeshTransform(act);
+	mesh.instances = getMeshTransforms(act);
 
 	return mesh;
 }
 
 std::optional<ShaderVariable> GowReplayer::getShaderConstantVariable(
-	ShaderStage stage, const std::string& varName)
+	ShaderStage stage, const std::string& name)
 {
 	std::optional<ShaderVariable> result;
 
@@ -387,15 +424,11 @@ std::optional<ShaderVariable> GowReplayer::getShaderConstantVariable(
 	auto        entry = state.GetShaderEntryPoint(stage);
 	auto        rf    = state.GetShaderReflection(stage);
 
-	auto roResource = state.GetReadOnlyResources(stage);
-	auto rwResource = state.GetReadWriteResources(stage);
-	const auto& bindMapping = state.GetBindpointMapping(stage);
-
 	bool     found  = false;
 	uint32_t varIdx = 0;
 	for (const auto& cb : rf->constantBlocks)
 	{
-		if (cb.name.contains(varName.c_str()))
+		if (cb.name.contains(name.c_str()))
 		{
 			found = true;
 			break;
@@ -403,7 +436,7 @@ std::optional<ShaderVariable> GowReplayer::getShaderConstantVariable(
 		++varIdx;
 	}
 
-	LOG_ASSERT(found, "can not find {}.", varName);
+	LOG_ASSERT(found, "can not find {}.", name);
 
 	auto varBuffer = state.GetConstantBuffer(stage, varIdx, 0);
 	auto varList   = m_player->GetCBufferVariableContents(pipe,
@@ -416,6 +449,57 @@ std::optional<ShaderVariable> GowReplayer::getShaderConstantVariable(
 														  0);
 	LOG_ASSERT(varList.size() == 1, "variable array not supported.");
 	result = varList[0];
+	return result;
+}
+
+GowReplayer::ResourceBuffer GowReplayer::getShaderResourceBuffer(
+	ShaderStage stage, const std::string& name)
+{
+	// TODO:
+	// support read-write resource
+
+	ResourceBuffer result = {};
+	result.id = ResourceId::Null();
+
+	const auto& state      = m_player->GetPipelineState();
+	auto        rf         = state.GetShaderReflection(stage);
+	const auto& resMapping = state.GetBindpointMapping(stage);
+
+	rdcarray<BoundResourceArray> roBinds = state.GetReadOnlyResources(stage);
+	for (const auto& res : rf->readOnlyResources)
+	{
+		if (!res.name.contains(name.c_str()))
+		{
+			continue;
+		}
+
+		Bindpoint bind = resMapping.readOnlyResources[res.bindPoint];
+
+		if (!bind.used)
+		{
+			continue;
+		}
+
+		int32_t bindIdx = roBinds.indexOf(bind);
+
+		if (bindIdx < 0)
+			continue;
+
+		BoundResourceArray& roBind = roBinds[bindIdx];
+
+		LOG_ASSERT(bind.arraySize == 1, "array bind not supported.");
+
+		if (roBind.resources.empty())
+		{
+			continue;
+		}
+
+		result.id     = roBind.resources[0].resourceId;
+		result.format = res.variableType;
+
+		break;
+	}
+
 	return result;
 }
 
@@ -444,6 +528,34 @@ std::vector<float> GowReplayer::unpackData(
 			LOG_ASSERT(false, "TODO: not supported component type.");
 			break;
 	}
+	return result;
+}
+
+MeshTransform GowReplayer::calculateTransform(const glm::mat4& modelView)
+{
+	MeshTransform result = {};
+	
+	result.translation.x = modelView[0][3];
+	result.translation.y = modelView[1][3];
+	result.translation.z = modelView[2][3];
+
+	result.scaling.x = glm::length(glm::row(modelView, 0)) * modelView[0][0] > 0.0 ? 1.0f : -1.0f;
+	result.scaling.y = glm::length(glm::row(modelView, 1)) * modelView[1][1] > 0.0 ? 1.0f : -1.0f;
+	result.scaling.z = glm::length(glm::row(modelView, 2)) * modelView[2][2] > 0.0 ? 1.0f : -1.0f;
+
+	const auto& scaling = result.scaling;
+	// get upper 3x3 matrix
+	glm::mat3 upper = glm::mat3(modelView);
+	glm::row(upper, 0, glm::row(modelView, 0) / scaling.x);
+	glm::row(upper, 1, glm::row(modelView, 1) / scaling.y);
+	glm::row(upper, 2, glm::row(modelView, 2) / scaling.z);
+	
+	glm::mat4 rotation = glm::mat4(upper);
+	glm::vec3 radians  = {};
+	glm::extractEulerAngleXYZ(rotation, radians.x, radians.y, radians.z);
+
+	result.rotation = radians * 180.0f / glm::pi<float>();
+
 	return result;
 }
 

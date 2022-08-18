@@ -17,6 +17,12 @@ struct MeshData : public MeshFormat
 
 class GowReplayer
 {
+	struct ResourceBuffer
+	{
+		ResourceId         id;
+		ShaderConstantType format;
+	};
+
 public:
 	GowReplayer();
 	~GowReplayer();
@@ -36,17 +42,21 @@ private:
 	void extractResource(const ActionDescription& act);
 	void extractMesh(const ActionDescription& act);
 
-	std::vector<MeshData> getMeshAttributes(const ActionDescription& act);
-	std::vector<uint32_t> getMeshIndices(const MeshData& mesh);
-	MeshTransform         getMeshTransform(const ActionDescription& act);
-	MeshObject            buildMeshObject(const ActionDescription& act);
+	std::vector<MeshData>      getMeshAttributes(const ActionDescription& act);
+	std::vector<uint32_t>      getMeshIndices(const MeshData& mesh);
+	std::vector<MeshTransform> getMeshTransforms(const ActionDescription& act);
+	MeshObject                 buildMeshObject(const ActionDescription& act);
 
 	std::optional<ShaderVariable> getShaderConstantVariable(
-		ShaderStage stage, const std::string& varName);
+		ShaderStage stage, const std::string& name);
+	ResourceBuffer getShaderResourceBuffer(
+		ShaderStage stage, const std::string& name);
 
 	std::vector<float> unpackData(
 		const ResourceFormat& fmt,
 		const uint8_t*        data);
+
+	MeshTransform calculateTransform(const glm::mat4& modelView);
 
 	std::string getOutFilename(const std::string& inFilename);
 

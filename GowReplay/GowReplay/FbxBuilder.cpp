@@ -21,12 +21,6 @@ bool MeshObject::isValid()
 	return !position.empty();
 }
 
-bool MeshObject::operator==(const MeshObject& other)
-{
-	return position == other.position &&
-		   transform == other.transform;
-}
-
 FbxBuilder::FbxBuilder()
 {
 	initializeSdkObjects();

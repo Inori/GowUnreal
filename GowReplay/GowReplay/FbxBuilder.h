@@ -22,11 +22,9 @@ struct MeshObject
 	std::vector<uint32_t>  indices;
 	std::vector<glm::vec3> position;
 
-	MeshTransform transform;
+	std::vector<MeshTransform> instances;
 
 	bool isValid();
-
-	bool operator==(const MeshObject& other);
 };
 
 
