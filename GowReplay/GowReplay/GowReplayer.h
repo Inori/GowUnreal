@@ -60,6 +60,8 @@ private:
 
 	std::string getOutFilename(const std::string& inFilename);
 
+	bool isBoneMesh();
+
 private:
 	ICaptureFile*        m_cap    = nullptr;
 	IReplayController*   m_player = nullptr;

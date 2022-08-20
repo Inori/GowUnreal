@@ -39,7 +39,7 @@ public:
 	void build(const std::string& filename);
 
 private:
-	FbxNode* createMesh(const MeshObject& mesh);
+	std::vector<FbxNode*> createMesh(const MeshObject& mesh);
 
 	void initializeSdkObjects();
 	void destroySdkObjects();

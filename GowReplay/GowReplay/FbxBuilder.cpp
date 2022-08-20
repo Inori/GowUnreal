@@ -33,11 +33,14 @@ FbxBuilder::~FbxBuilder()
 
 void FbxBuilder::addMesh(const MeshObject& mesh)
 {
-	auto meshNode = createMesh(mesh);
+	auto meshNodes = createMesh(mesh);
 
 	// Add node to node tree.
 	FbxNode* rootNode = m_scene->GetRootNode();
-	rootNode->AddChild(meshNode);
+	for (const auto& node : meshNodes)
+	{
+		rootNode->AddChild(node);
+	}
 }
 
 void FbxBuilder::build(const std::string& filename)
@@ -62,8 +65,9 @@ void FbxBuilder::build(const std::string& filename)
 			if (m_manager->GetIOPluginRegistry()->WriterIsFBX(lFormatIndex))
 			{
 				FbxString   lDesc  = m_manager->GetIOPluginRegistry()->GetWriterFormatDescription(lFormatIndex);
-				const char* lASCII = "ascii";
-				if (lDesc.Find(lASCII) >= 0)
+				//const char* lFormat = "ascii";
+				const char* lFormat = "binary";
+				if (lDesc.Find(lFormat) >= 0)
 				{
 					lFileFormat = lFormatIndex;
 					break;
@@ -101,7 +105,7 @@ void FbxBuilder::build(const std::string& filename)
 	lExporter->Destroy();
 }
 
-FbxNode* FbxBuilder::createMesh(const MeshObject& mesh)
+std::vector<FbxNode*> FbxBuilder::createMesh(const MeshObject& mesh)
 {
 	FbxMesh* lMesh = FbxMesh::Create(m_scene, "");
 
@@ -129,12 +133,30 @@ FbxNode* FbxBuilder::createMesh(const MeshObject& mesh)
 		lMesh->EndPolygon();
 	}
 
-	// Create the node containing the mesh
-	FbxNode* node = FbxNode::Create(m_scene, mesh.name.c_str());
-	node->SetNodeAttribute(lMesh);
-	node->SetShadingMode(FbxNode::eTextureShading);
+	auto toFbxDb3 = [](const glm::vec3& vec) 
+	{
+		return FbxDouble3(vec[0], vec[1], vec[2]);
+	};
 
-	return node;
+	std::vector<FbxNode*> nodeInstances;
+	uint32_t              instanceId = 0;
+	for (const auto& trs : mesh.instances)
+	{
+		// Create the node containing the mesh
+		auto     nodeName = fmt::format("{}_{}", mesh.name, instanceId++);
+		FbxNode* node     = FbxNode::Create(m_scene, nodeName.c_str());
+		node->SetNodeAttribute(lMesh);
+		node->SetShadingMode(FbxNode::eTextureShading);
+
+		// Apply transform
+		node->LclTranslation.Set(toFbxDb3(trs.translation));
+		node->LclRotation.Set(toFbxDb3(trs.rotation));
+		node->LclScaling.Set(toFbxDb3(trs.scaling));
+
+		nodeInstances.push_back(node);
+	}
+
+	return nodeInstances;
 }
 
 void FbxBuilder::initializeSdkObjects()

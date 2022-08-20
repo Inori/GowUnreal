@@ -294,8 +294,6 @@ std::vector<MeshTransform> GowReplayer::getMeshTransforms(const ActionDescriptio
 
 		break;
 	}
-	// we all use multiply on left, so transpose view matrix
-	view = glm::transpose(view);
 
 	// find model data
 
@@ -347,17 +345,20 @@ std::vector<MeshTransform> GowReplayer::getMeshTransforms(const ActionDescriptio
 		glm::mat4 insTransform(0);
 		std::memcpy(&insTransform, data, insBufferInfo.format.members[0].type.arrayByteStride);
 		insTransform[3][3] = 1.0;
+		insTransform = glm::transpose(insTransform);
 
-		// merge instance transform and common transform
-		glm::mat4 modelView = view * insTransform;
-		// merge position bias
-		modelView[0][3] += quantBias[0];
-		modelView[1][3] += quantBias[1];
-		modelView[2][3] += quantBias[2];
-		// merge quant scale
-		modelView[0][0] *= quantScale[0];
-		modelView[1][1] *= quantScale[1];
-		modelView[2][2] *= quantScale[2];
+		// convert quant scale and bias into matrix
+		glm::mat4 quant(1);
+		quant[0][0] = quantScale[0];
+		quant[1][1] = quantScale[1];
+		quant[2][2] = quantScale[2];
+
+		quant[3][0] += quantBias[0];
+		quant[3][1] += quantBias[1];
+		quant[3][2] += quantBias[2];
+		
+		// merge all transform
+		glm::mat4 modelView = view * insTransform * quant;
 
 		auto transform = calculateTransform(modelView);
 		instances.push_back(transform);
@@ -535,26 +536,28 @@ MeshTransform GowReplayer::calculateTransform(const glm::mat4& modelView)
 {
 	MeshTransform result = {};
 	
-	result.translation.x = modelView[0][3];
-	result.translation.y = modelView[1][3];
-	result.translation.z = modelView[2][3];
+	result.translation.x = modelView[3][0];
+	result.translation.y = modelView[3][1];
+	result.translation.z = modelView[3][2];
 
-	result.scaling.x = glm::length(glm::row(modelView, 0)) * modelView[0][0] > 0.0 ? 1.0f : -1.0f;
-	result.scaling.y = glm::length(glm::row(modelView, 1)) * modelView[1][1] > 0.0 ? 1.0f : -1.0f;
-	result.scaling.z = glm::length(glm::row(modelView, 2)) * modelView[2][2] > 0.0 ? 1.0f : -1.0f;
+	result.scaling.x = glm::length(glm::column(modelView, 0));
+	result.scaling.y = glm::length(glm::column(modelView, 1));
+	result.scaling.z = glm::length(glm::column(modelView, 2));
 
 	const auto& scaling = result.scaling;
 	// get upper 3x3 matrix
 	glm::mat3 upper = glm::mat3(modelView);
-	glm::row(upper, 0, glm::row(modelView, 0) / scaling.x);
-	glm::row(upper, 1, glm::row(modelView, 1) / scaling.y);
-	glm::row(upper, 2, glm::row(modelView, 2) / scaling.z);
+	glm::column(upper, 0, glm::column(upper, 0) / scaling.x);
+	glm::column(upper, 1, glm::column(upper, 1) / scaling.y);
+	glm::column(upper, 2, glm::column(upper, 2) / scaling.z);
 	
+	// default rotation order in FBX SDK is of XYZ, R = Rx * Ry * Rz
+	// so we need to rotate across Z then Y then X
 	glm::mat4 rotation = glm::mat4(upper);
 	glm::vec3 radians  = {};
-	glm::extractEulerAngleXYZ(rotation, radians.x, radians.y, radians.z);
+	glm::extractEulerAngleZYX(rotation, radians.z, radians.y, radians.x);
 
-	result.rotation = radians * 180.0f / glm::pi<float>();
+	result.rotation = glm::degrees(radians);
 
 	return result;
 }
@@ -564,4 +567,20 @@ std::string GowReplayer::getOutFilename(const std::string& inFilename)
 	std::filesystem::path inPath(inFilename);
 	auto outPath = inPath.parent_path() / (inPath.stem().string() + std::string(".fbx"));
 	return outPath.string();
+}
+
+bool GowReplayer::isBoneMesh()
+{
+	const auto& state = m_player->GetPipelineState();
+	auto        rf    = state.GetShaderReflection(ShaderStage::Vertex);
+
+	for (const auto& res : rf->readOnlyResources)
+	{
+		if (res.name.contains("bones") || res.name.contains("Bones"))
+		{
+			return true;
+		}
+	}
+
+	return false;
 }
