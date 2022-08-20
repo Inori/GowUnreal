@@ -56,7 +56,7 @@ private:
 		const ResourceFormat& fmt,
 		const uint8_t*        data);
 
-	MeshTransform calculateTransform(const glm::mat4& modelView);
+	MeshTransform decomposeTransform(const glm::mat4& modelView);
 
 	std::string getOutFilename(const std::string& inFilename);
 

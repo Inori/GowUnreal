@@ -360,7 +360,7 @@ std::vector<MeshTransform> GowReplayer::getMeshTransforms(const ActionDescriptio
 		// merge all transform
 		glm::mat4 modelView = view * insTransform * quant;
 
-		auto transform = calculateTransform(modelView);
+		auto transform = decomposeTransform(modelView);
 		instances.push_back(transform);
 	}
 
@@ -532,7 +532,7 @@ std::vector<float> GowReplayer::unpackData(
 	return result;
 }
 
-MeshTransform GowReplayer::calculateTransform(const glm::mat4& modelView)
+MeshTransform GowReplayer::decomposeTransform(const glm::mat4& modelView)
 {
 	MeshTransform result = {};
 	
