@@ -210,12 +210,6 @@ std::vector<MeshData> GowReplayer::getMeshAttributes(const ActionDescription& ac
 		// vertices
 		const auto& vb = vbs[attr.vertexBuffer];
 
-		// skip already processed mesh
-		if (m_resourceSet.find(vb.resourceId) != m_resourceSet.end())
-		{
-			continue;
-		}
-
 		mesh.vertexByteOffset = attr.byteOffset +
 								vb.byteOffset +
 								act.vertexOffset * vb.byteStride;
@@ -223,9 +217,7 @@ std::vector<MeshData> GowReplayer::getMeshAttributes(const ActionDescription& ac
 		mesh.vertexResourceId = vb.resourceId;
 		mesh.vertexByteStride = vb.byteStride;
 
-
 		result.push_back(mesh);
-		m_resourceSet.insert(vb.resourceId);
 	}
 	return result;
 }

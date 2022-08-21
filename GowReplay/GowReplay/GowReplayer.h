@@ -65,7 +65,6 @@ private:
 private:
 	ICaptureFile*        m_cap    = nullptr;
 	IReplayController*   m_player = nullptr;
-	std::set<ResourceId> m_resourceSet;
 	FbxBuilder           m_fbx;
 };
 
