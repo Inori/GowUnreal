@@ -20,7 +20,11 @@ struct MeshObject
 	uint32_t               eid;
 	std::string            name;
 	std::vector<uint32_t>  indices;
+
 	std::vector<glm::vec3> position;
+	std::vector<glm::vec2> texcoord;
+	std::vector<glm::vec4> tangent;
+	std::vector<glm::vec4> normal;
 
 	std::vector<MeshTransform> instances;
 
@@ -39,7 +43,11 @@ public:
 	void build(const std::string& filename);
 
 private:
-	std::vector<FbxNode*> createMesh(const MeshObject& mesh);
+	FbxMesh*              createMesh(const MeshObject& mesh);
+	std::vector<FbxNode*> createInstances(const MeshObject& info, FbxMesh* mesh);
+	void                  assignNormal(const MeshObject& info, FbxMesh* mesh);
+	void                  assignTexcoord(const MeshObject& info, FbxMesh* mesh);
+	void                  createMaterial(const std::vector<FbxNode*>& nodeList);
 
 	void initializeSdkObjects();
 	void destroySdkObjects();
@@ -47,5 +55,6 @@ private:
 private:
 	FbxManager* m_manager = nullptr;
 	FbxScene*   m_scene   = nullptr;
+	std::string m_uvName  = "SharedUV";
 };
 

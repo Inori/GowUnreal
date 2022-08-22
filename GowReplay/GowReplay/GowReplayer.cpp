@@ -1,5 +1,6 @@
 #include "GowReplayer.h"
 #include "Log.h"
+#include "Tools.h"
 
 template <>
 rdcstr DoStringise(const uint32_t& el)
@@ -17,9 +18,12 @@ rdcstr DoStringise(const uint32_t& el)
 #include <chrono>
 #include <filesystem>
 #include <map>
+#include <cmath>
+
 #include "gtc/matrix_access.hpp"
 #include "gtc/constants.hpp"
 #include "gtx/euler_angles.hpp"
+#include "half.hpp"
 
 
 REPLAY_PROGRAM_MARKER();
@@ -62,6 +66,12 @@ bool GowReplayer::captureLoad(const std::string& capFile)
 	bool ret = false;
 	do
 	{
+		if (!std::filesystem::is_regular_file(capFile))
+		{
+			LOG_ERR("rdc file not found: {}", capFile);
+			break;
+		}
+
 		LOG_DEBUG("loading capture file: {}", capFile);
 
 		m_cap = RENDERDOC_OpenCaptureFile();
@@ -383,24 +393,41 @@ MeshObject GowReplayer::buildMeshObject(const ActionDescription& act)
 
 	for (const auto& attr : meshAttrs)
 	{
-		if (attr.name != "POSITION")
-		{
-			continue;
-		}
-
 		auto& buffer = vtxCache[attr.vertexResourceId];
 		auto  offset = attr.vertexByteOffset;
 		auto  stride = attr.vertexByteStride;
 		auto  count  = buffer.size() / stride;
+
 		for (size_t i = 0; i != count; ++i)
 		{
 			uint8_t* data  = &buffer[offset + i * stride];
 			auto     value = unpackData(attr.format, data);
 
-			glm::vec3 vtx(value[0], value[1], value[2]);
-			mesh.position.push_back(vtx);
+			if (attr.name == "POSITION")
+			{
+				LOG_ASSERT(value.size() == 3, "");
+				glm::vec3 vtx(value[0], value[1], value[2]);
+				mesh.position.push_back(vtx);
+			}
+			else if (attr.name == "TEXCOORD" || attr.name == "TEXCOORD0")
+			{
+				glm::vec2 texcoord(value[0], value[1]);
+				mesh.texcoord.push_back(texcoord);
+			}
+			else if (attr.name == "NORMAL")
+			{
+				glm::vec4 normal(value[0], value[1], value[2], value.size() == 4 ? value[3] : 0.0f);
+				mesh.normal.push_back(normal);
+			}
+			else if (attr.name == "TANGENT")
+			{
+				glm::vec4 tangent(value[0], value[1], value[2], value.size() == 4 ? value[3] : 1.0f);
+				mesh.tangent.push_back(tangent);
+			}
 		}
 	}
+
+	LOG_ASSERT(mesh.texcoord.empty() || mesh.texcoord.size() == mesh.position.size(), "texcoord count not match");
 
 	mesh.instances = getMeshTransforms(act);
 
@@ -501,25 +528,108 @@ std::vector<float> GowReplayer::unpackData(
 	const uint8_t*        data)
 {
 	std::vector<float> result;
-	if (fmt.Special())
-	{
-		LOG_WARN("TODO: support packed formats.");
-	}
 
-	switch (fmt.compType)
+	LOG_ASSERT(fmt.BGRAOrder() == false, "BGRA order not supported.");
+
+	auto fmtName = fmt.Name();
+
+	// TODO:
+	// this implementation is really ugly,
+	// we should use a uniform way instead of support by name...
+	if (fmtName == "R32G32B32_FLOAT" || fmtName == "R32G32_FLOAT" || fmtName == "R32G32B32A32_FLOAT")
 	{
-		case CompType::Float:
+		LOG_ASSERT(fmt.compByteWidth == sizeof(float), "TODO");
+		for (size_t i = 0; i != fmt.compCount; ++i)
 		{
-			LOG_ASSERT(fmt.compByteWidth == sizeof(float), "TODO");
-			for (size_t i = 0; i != fmt.compCount; ++i)
-			{
-				result.push_back((reinterpret_cast<const float*>(data))[i]);
-			}
+			result.push_back((reinterpret_cast<const float*>(data))[i]);
 		}
-			break;
-		default:
-			LOG_ASSERT(false, "TODO: not supported component type.");
-			break;
+	}
+	else if (fmtName == "R16G16_UNORM")
+	{
+		LOG_ASSERT(fmt.compByteWidth == sizeof(uint16_t), "TODO");
+		float divisor = float(std::exp2(fmt.compByteWidth * 8) - 1);
+		for (size_t i = 0; i != fmt.compCount; ++i)
+		{
+			uint16_t val = (reinterpret_cast<const uint16_t*>(data))[i];
+			result.push_back((float)val / divisor);
+		}
+	}
+	else if (fmtName == "R8G8B8A8_UNORM")
+	{
+		LOG_ASSERT(fmt.compByteWidth == sizeof(uint8_t), "TODO");
+		float divisor = float(std::exp2(fmt.compByteWidth * 8) - 1);
+		for (size_t i = 0; i != fmt.compCount; ++i)
+		{
+			uint8_t val = (reinterpret_cast<const uint8_t*>(data))[i];
+			result.push_back((float)val / divisor);
+		}
+	}
+	else if (fmtName == "R16G16_SNORM")
+	{
+		LOG_ASSERT(fmt.compByteWidth == sizeof(int16_t), "TODO");
+		float maxNeg  = -float(std::exp2(fmt.compByteWidth * 8)) / 2;
+		float divisor = float(-(maxNeg - 1));
+		for (size_t i = 0; i != fmt.compCount; ++i)
+		{
+			int16_t val  = (reinterpret_cast<const int16_t*>(data))[i];
+			float   fval = (float)val == maxNeg ? (float)val : (float)val / divisor;
+			result.push_back(fval);
+		}
+	}
+	else if (fmtName == "R10G10B10A2_UNORM")
+	{
+		float divisor10 = float(std::exp2(10) - 1);
+		float divisor2 = float(std::exp2(2) - 1);
+
+		uint32_t value = *reinterpret_cast<const uint32_t*>(data);
+		uint16_t r     = bit::extract(value, 9, 0);
+		uint16_t g     = bit::extract(value, 19, 10);
+		uint16_t b     = bit::extract(value, 29, 20);
+		uint16_t a     = bit::extract(value, 31, 30);
+		result.push_back((float)r / divisor10);
+		result.push_back((float)g / divisor10);
+		result.push_back((float)b / divisor10);
+		result.push_back((float)a / divisor2);
+	}
+	else if (fmtName == "R16G16B16A16_UINT")
+	{
+		LOG_ASSERT(fmt.compByteWidth == sizeof(uint16_t), "TODO");
+		for (size_t i = 0; i != fmt.compCount; ++i)
+		{
+			uint16_t val = (reinterpret_cast<const uint16_t*>(data))[i];
+			result.push_back((float)val);
+		}
+	}
+	else if (fmtName == "R16G16B16A16_FLOAT")
+	{
+		LOG_ASSERT(fmt.compByteWidth == sizeof(half_float::half), "TODO");
+		for (size_t i = 0; i != fmt.compCount; ++i)
+		{
+			half_float::half val = (reinterpret_cast<const half_float::half*>(data))[i];
+			result.push_back(val);
+		}
+	}
+	else if (fmtName == "R8G8B8A8_UINT")
+	{
+		LOG_ASSERT(fmt.compByteWidth == sizeof(uint8_t), "TODO");
+		for (size_t i = 0; i != fmt.compCount; ++i)
+		{
+			uint8_t val = (reinterpret_cast<const uint8_t*>(data))[i];
+			result.push_back((float)val);
+		}
+	}
+	else if (fmtName == "R32_UINT")
+	{
+		LOG_ASSERT(fmt.compByteWidth == sizeof(uint32_t), "TODO");
+		for (size_t i = 0; i != fmt.compCount; ++i)
+		{
+			uint32_t val = (reinterpret_cast<const uint32_t*>(data))[i];
+			result.push_back((float)val);
+		}
+	}
+	else
+	{
+		LOG_ASSERT(false, "unsupported buffer format {}.", fmtName.c_str());
 	}
 	return result;
 }

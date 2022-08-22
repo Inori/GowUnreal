@@ -175,6 +175,7 @@
     <ClInclude Include="replay\include\structured_data.h" />
     <ClInclude Include="replay\include\version.h" />
     <ClInclude Include="replay\include\vk_pipestate.h" />
+    <ClInclude Include="Tools.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="replay\include\pipestate.inl" />

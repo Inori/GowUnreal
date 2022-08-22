@@ -33,9 +33,16 @@ FbxBuilder::~FbxBuilder()
 
 void FbxBuilder::addMesh(const MeshObject& mesh)
 {
-	auto meshNodes = createMesh(mesh);
+	auto lMesh     = createMesh(mesh);
+	auto meshNodes = createInstances(mesh, lMesh);
 
-	// Add node to node tree.
+	// UV should be assigned after node created
+	assignTexcoord(mesh, lMesh);
+
+	// Create material for every instance node
+	createMaterial(meshNodes);
+
+	// Add nodes to root.
 	FbxNode* rootNode = m_scene->GetRootNode();
 	for (const auto& node : meshNodes)
 	{
@@ -105,7 +112,7 @@ void FbxBuilder::build(const std::string& filename)
 	lExporter->Destroy();
 }
 
-std::vector<FbxNode*> FbxBuilder::createMesh(const MeshObject& mesh)
+FbxMesh* FbxBuilder::createMesh(const MeshObject& mesh)
 {
 	FbxMesh* lMesh = FbxMesh::Create(m_scene, "");
 
@@ -133,19 +140,27 @@ std::vector<FbxNode*> FbxBuilder::createMesh(const MeshObject& mesh)
 		lMesh->EndPolygon();
 	}
 
-	auto toFbxDb3 = [](const glm::vec3& vec) 
+	assignNormal(mesh, lMesh);
+
+	return lMesh;
+}
+
+std::vector<FbxNode*> FbxBuilder::createInstances(const MeshObject& info, FbxMesh* mesh)
+{
+	std::vector<FbxNode*> nodeInstances;
+	uint32_t              instanceId = 0;
+
+	auto toFbxDb3 = [](const glm::vec3& vec)
 	{
 		return FbxDouble3(vec[0], vec[1], vec[2]);
 	};
 
-	std::vector<FbxNode*> nodeInstances;
-	uint32_t              instanceId = 0;
-	for (const auto& trs : mesh.instances)
+	for (const auto& trs : info.instances)
 	{
 		// Create the node containing the mesh
-		auto     nodeName = fmt::format("{}_{}", mesh.name, instanceId++);
+		auto     nodeName = fmt::format("{}_{}", info.name, instanceId++);
 		FbxNode* node     = FbxNode::Create(m_scene, nodeName.c_str());
-		node->SetNodeAttribute(lMesh);
+		node->SetNodeAttribute(mesh);
 		node->SetShadingMode(FbxNode::eTextureShading);
 
 		// Apply transform
@@ -157,6 +172,136 @@ std::vector<FbxNode*> FbxBuilder::createMesh(const MeshObject& mesh)
 	}
 
 	return nodeInstances;
+}
+
+void FbxBuilder::assignNormal(const MeshObject& info, FbxMesh* mesh)
+{
+	if (info.normal.empty())
+	{
+		return;
+	}
+
+	FbxLayer* lLayer = mesh->GetLayer(0);
+	if (lLayer == NULL)
+	{
+		mesh->CreateLayer();
+		lLayer = mesh->GetLayer(0);
+	}
+
+	// Create a normal layer.
+	FbxLayerElementNormal* lLayerElementNormal = FbxLayerElementNormal::Create(mesh, "");
+
+	// Set its mapping mode to map each normal vector to each control point.
+	lLayerElementNormal->SetMappingMode(FbxLayerElement::eByControlPoint);
+
+	// Set the reference mode of so that the n'th element of the normal array maps to the n'th
+	// element of the control point array.
+	lLayerElementNormal->SetReferenceMode(FbxLayerElement::eDirect);
+
+	// The normals in info.normal should be matched with info.position
+	auto& lDirectArray = lLayerElementNormal->GetDirectArray();
+	int   normalCount  = (int)info.normal.size();
+	lDirectArray.Resize(normalCount);
+	for (int i = 0; i != normalCount; ++i)
+	{
+		auto& n = info.normal[i];
+		lDirectArray.SetAt(i, FbxVector4(n[0], n[1], n[2], n[3]));
+	}
+
+	// Finally, we set layer 0 of the mesh to the normal layer element.
+	lLayer->SetNormals(lLayerElementNormal);
+}
+
+void FbxBuilder::assignTexcoord(const MeshObject& info, FbxMesh* mesh)
+{
+	if (info.texcoord.empty())
+	{
+		return;
+	}
+
+	// Create UV for Diffuse channel
+	FbxGeometryElementUV* lUVElement = mesh->CreateElementUV(m_uvName.c_str());
+	FBX_ASSERT(lUVElement != NULL);
+	lUVElement->SetMappingMode(FbxGeometryElement::eByControlPoint);
+	lUVElement->SetReferenceMode(FbxGeometryElement::eDirect);
+
+	auto& lDirectArray = lUVElement->GetDirectArray();
+	int   coordCount   = (int)info.texcoord.size();
+	lDirectArray.Resize(coordCount);
+	for (int i = 0; i != coordCount; ++i)
+	{
+		auto& uv = info.texcoord[i];
+		lDirectArray.SetAt(i, FbxVector2(uv[0], uv[1]));
+	}
+
+	auto nodeCount = mesh->GetNodeCount();
+	for (int n = 0; n != nodeCount; ++n)
+	{
+		auto node = mesh->GetNode(n);
+		node->SetShadingMode(FbxNode::eTextureShading);
+	}
+}
+
+void FbxBuilder::createMaterial(const std::vector<FbxNode*>& nodeList)
+{
+	for (auto& lNode : nodeList)
+	{
+		if (!lNode)
+		{
+			continue;
+		}
+
+		FbxMesh* pMesh = lNode->GetMesh();
+
+		// A texture need to be connected to a property on the material,
+		// so let's use the material (if it exists) or create a new one
+		FbxSurfacePhong* lMaterial = lNode->GetSrcObject<FbxSurfacePhong>(0);
+
+		if (lMaterial != NULL)
+		{
+			continue;
+		}
+
+		FbxString  lMaterialName = "GowMaterial";
+		FbxString  lShadingName  = "Phong";
+		FbxDouble3 lBlack(0.0, 0.0, 0.0);
+		FbxDouble3 lRed(1.0, 0.0, 0.0);
+		FbxDouble3 lDiffuseColor(0.75, 0.75, 0.0);
+
+		FbxLayer* lLayer = pMesh->GetLayer(0);
+
+		// Create a layer element material to handle proper mapping.
+		FbxLayerElementMaterial* lLayerElementMaterial = FbxLayerElementMaterial::Create(pMesh, lMaterialName.Buffer());
+
+		// This allows us to control where the materials are mapped.  Using eAllSame
+		// means that all faces/polygons of the mesh will be assigned the same material.
+		lLayerElementMaterial->SetMappingMode(FbxLayerElement::eAllSame);
+		lLayerElementMaterial->SetReferenceMode(FbxLayerElement::eIndexToDirect);
+
+		// Save the material on the layer
+		lLayer->SetMaterials(lLayerElementMaterial);
+
+		// Add an index to the lLayerElementMaterial.  Since we have only one, and are using eAllSame mapping mode,
+		// we only need to add one.
+		lLayerElementMaterial->GetIndexArray().Add(0);
+
+		lMaterial = FbxSurfacePhong::Create(m_scene, lMaterialName.Buffer());
+
+		// Generate primary and secondary colors.
+		lMaterial->Emissive.Set(lBlack);
+		lMaterial->Ambient.Set(lRed);
+		lMaterial->AmbientFactor.Set(1.);
+		// Add texture for diffuse channel
+		lMaterial->Diffuse.Set(lDiffuseColor);
+		lMaterial->DiffuseFactor.Set(1.);
+		lMaterial->TransparencyFactor.Set(0.4);
+		lMaterial->ShadingModel.Set(lShadingName);
+		lMaterial->Shininess.Set(0.5);
+		lMaterial->Specular.Set(lBlack);
+		lMaterial->SpecularFactor.Set(0.3);
+
+		lNode->AddMaterial(lMaterial);
+	}
 }
 
 void FbxBuilder::initializeSdkObjects()
