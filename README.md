@@ -8,9 +8,9 @@ The exported resources will be stored in FBX format of Autodesk, so they can be 
 
 ### Progress
 In Game:  
-![Hill1](https://github.com/Inori/GowUnreal/tree/master/Images/hill1_game.jpg)  
+![Hill1](https://github.com/Inori/GowUnreal/blob/master/Images/hill1_game.jpg?raw=true)  
 
 In Maya:  
-![Hill1](https://github.com/Inori/GowUnreal/tree/master/Images/hill_maya1.jpg)  
-![Hill2](https://github.com/Inori/GowUnreal/tree/master/Images/hill_maya2.jpg)  
-![Hill2](https://github.com/Inori/GowUnreal/tree/master/Images/hill_maya3.jpg)  
+![Hill1](https://github.com/Inori/GowUnreal/blob/master/Images/hill_maya1.jpg?raw=true)  
+![Hill2](https://github.com/Inori/GowUnreal/blob/master/Images/hill_maya2.jpg?raw=true)  
+![Hill2](https://github.com/Inori/GowUnreal/blob/master/Images/hill_maya3.jpg?raw=true)  
