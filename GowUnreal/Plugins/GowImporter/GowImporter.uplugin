@@ -1,0 +1,24 @@
+{
+	"FileVersion": 3,
+	"Version": 1,
+	"VersionName": "1.0",
+	"FriendlyName": "GowImporter",
+	"Description": "Export resources from GOW4 to UE5",
+	"Category": "Other",
+	"CreatedBy": "Asuka",
+	"CreatedByURL": "",
+	"DocsURL": "",
+	"MarketplaceURL": "",
+	"SupportURL": "",
+	"CanContainContent": true,
+	"IsBetaVersion": false,
+	"IsExperimentalVersion": false,
+	"Installed": false,
+	"Modules": [
+		{
+			"Name": "GowImporter",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
+		}
+	]
+}
