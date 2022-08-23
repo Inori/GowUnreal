@@ -25,6 +25,7 @@ rdcstr DoStringise(const uint32_t& el)
 #include "gtx/euler_angles.hpp"
 #include "half.hpp"
 
+namespace fs = std::filesystem;
 
 REPLAY_PROGRAM_MARKER();
 
@@ -40,13 +41,15 @@ GowReplayer::~GowReplayer()
 
 void GowReplayer::replay(const std::string& capFile)
 {
-	captureLoad(capFile);
+	m_capFilename = capFile;
+
+	captureLoad();
 
 	processActions();
 
 	captureUnload();
 
-	auto outFilename = getOutFilename(capFile);
+	auto outFilename = getOutFilename();
 	m_fbx.build(outFilename);
 }
 
@@ -61,18 +64,18 @@ void GowReplayer::shutdown()
 	RENDERDOC_ShutdownReplay();
 }
 
-bool GowReplayer::captureLoad(const std::string& capFile)
+bool GowReplayer::captureLoad()
 {
 	bool ret = false;
 	do
 	{
-		if (!std::filesystem::is_regular_file(capFile))
+		if (!std::filesystem::is_regular_file(m_capFilename))
 		{
-			LOG_ERR("rdc file not found: {}", capFile);
+			LOG_ERR("rdc file not found: {}", m_capFilename);
 			break;
 		}
 
-		LOG_DEBUG("loading capture file: {}", capFile);
+		LOG_DEBUG("loading capture file: {}", m_capFilename);
 
 		m_cap = RENDERDOC_OpenCaptureFile();
 		if (!m_cap)
@@ -80,7 +83,7 @@ bool GowReplayer::captureLoad(const std::string& capFile)
 			break;
 		}
 
-		auto result = m_cap->OpenFile(capFile.c_str(), "rdc", nullptr);
+		auto result = m_cap->OpenFile(m_capFilename.c_str(), "rdc", nullptr);
 		if (!result.OK())
 		{
 			break;
@@ -102,7 +105,7 @@ bool GowReplayer::captureLoad(const std::string& capFile)
 
 	if (!ret)
 	{
-		LOG_ERR("open capture failed: {}", capFile);
+		LOG_ERR("open capture failed: {}", m_capFilename);
 	}
 
 	return ret;
@@ -163,27 +166,94 @@ void GowReplayer::extractResource(const ActionDescription& act)
 		return;
 	}
 
-	extractMesh(act);
-}
-
-void GowReplayer::extractMesh(const ActionDescription& act)
-{
 	// only process DrawIndexedInstanced
-	if (!((act.flags & ActionFlags::Drawcall) && 
-		(act.flags & ActionFlags::Indexed) &&
-		(act.flags & ActionFlags::Instanced)))
+	if (!((act.flags & ActionFlags::Drawcall) &&
+		  (act.flags & ActionFlags::Indexed) &&
+		  (act.flags & ActionFlags::Instanced)) ||
+		act.flags & ActionFlags::Indirect)
 	{
 		return;
 	}
 
 	m_player->SetFrameEvent(act.eventId, true);
 
-	LOG_TRACE("Add mesh from event {}", act.eventId);
-	auto mesh = buildMeshObject(act);
+	auto mesh    = extractMesh(act);
+	auto texList = extractTexture(act);
+
 	if (mesh.isValid())
 	{
+		mesh.textures = texList;
 		m_fbx.addMesh(mesh);
 	}
+}
+
+MeshObject GowReplayer::extractMesh(const ActionDescription& act)
+{
+	LOG_TRACE("Add mesh from event {}", act.eventId);
+	return buildMeshObject(act);
+}
+
+std::vector<std::string> GowReplayer::extractTexture(const ActionDescription& act)
+{
+	LOG_TRACE("Save texture from event {}", act.eventId);
+
+	std::vector<std::string> result;
+	fs::path outDir = fs::path(m_capFilename).parent_path();
+
+	auto texList = getShaderResourceTextures(ShaderStage::Pixel);
+
+	for (const auto& tex : texList)
+	{
+		if (tex.id == ResourceId::Null())
+		{
+			continue;
+		}
+
+		auto iter = m_textureCache.find(tex.id);
+		if (iter == m_textureCache.end())
+		{
+			// construct texture filename
+			auto packName  = fs::path(m_capFilename).stem();
+			auto texFolder = outDir / packName / "Textures" / fmt::format("EID-{:05d}", act.eventId);
+			if (!fs::exists(texFolder))
+			{
+				fs::create_directories(texFolder);
+			}
+
+			auto filename = texFolder / fmt::format("{}.dds", tex.name);
+			if (!fs::exists(filename))
+			{
+				LOG_TRACE("Saving new texture {} from event {}", filename.string(), act.eventId);
+
+				TextureSave texSave      = {};
+				texSave.resourceId       = tex.id;
+				texSave.alpha            = AlphaMapping::Preserve;
+				texSave.mip              = -1;
+				texSave.slice.sliceIndex = -1;
+				texSave.destType         = FileType::DDS;
+
+				m_player->SaveTexture(texSave, filename.string().c_str());
+			}
+			else
+			{
+				LOG_TRACE("Use saved texture {} for event {}", filename.string(), act.eventId);
+			}
+
+			result.push_back(filename.string());
+
+			m_textureCache[tex.id] = filename.string();
+		}
+		else
+		{
+			auto filename = iter->second;
+			// the texture is already saved,
+			// we return the saved file path
+			LOG_TRACE("Use saved texture {} for event {}", filename, act.eventId);
+			result.push_back(filename);
+		}
+	}
+
+	return result;
 }
 
 std::vector<MeshData> GowReplayer::getMeshAttributes(const ActionDescription& act)
@@ -503,7 +573,9 @@ GowReplayer::ResourceBuffer GowReplayer::getShaderResourceBuffer(
 		int32_t bindIdx = roBinds.indexOf(bind);
 
 		if (bindIdx < 0)
+		{
 			continue;
+		}
 
 		BoundResourceArray& roBind = roBinds[bindIdx];
 
@@ -518,6 +590,55 @@ GowReplayer::ResourceBuffer GowReplayer::getShaderResourceBuffer(
 		result.format = res.variableType;
 
 		break;
+	}
+
+	return result;
+}
+
+std::vector<GowReplayer::ResourceTexture> 
+GowReplayer::getShaderResourceTextures(ShaderStage stage)
+{
+	std::vector<ResourceTexture> result;
+
+	const auto& state      = m_player->GetPipelineState();
+	auto        rf         = state.GetShaderReflection(stage);
+	const auto& resMapping = state.GetBindpointMapping(stage);
+
+	rdcarray<BoundResourceArray> roBinds = state.GetReadOnlyResources(stage);
+	for (const auto& res : rf->readOnlyResources)
+	{
+		if (res.resType < TextureType::Texture1D || res.resType > TextureType::TextureCubeArray)
+		{
+			continue;
+		}
+
+		Bindpoint bind = resMapping.readOnlyResources[res.bindPoint];
+
+		if (!bind.used)
+		{
+			continue;
+		}
+
+		int32_t bindIdx = roBinds.indexOf(bind);
+
+		if (bindIdx < 0)
+		{
+			continue;
+		}
+
+		BoundResourceArray& roBind = roBinds[bindIdx];
+
+		LOG_ASSERT(bind.arraySize == 1, "array bind not supported.");
+
+		if (roBind.resources.empty())
+		{
+			continue;
+		}
+
+		ResourceTexture tex = {};
+		tex.id              = roBind.resources[0].resourceId;
+		tex.name            = res.name.c_str();
+		result.push_back(tex);
 	}
 
 	return result;
@@ -664,9 +785,9 @@ MeshTransform GowReplayer::decomposeTransform(const glm::mat4& modelView)
 	return result;
 }
 
-std::string GowReplayer::getOutFilename(const std::string& inFilename)
+std::string GowReplayer::getOutFilename()
 {
-	std::filesystem::path inPath(inFilename);
+	std::filesystem::path inPath(m_capFilename);
 	auto outPath = inPath.parent_path() / (inPath.stem().string() + std::string(".fbx"));
 	return outPath.string();
 }

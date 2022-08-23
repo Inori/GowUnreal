@@ -27,6 +27,7 @@ struct MeshObject
 	std::vector<glm::vec4> normal;
 
 	std::vector<MeshTransform> instances;
+	std::vector<std::string>   textures;
 
 	bool isValid();
 };
@@ -47,7 +48,10 @@ private:
 	std::vector<FbxNode*> createInstances(const MeshObject& info, FbxMesh* mesh);
 	void                  assignNormal(const MeshObject& info, FbxMesh* mesh);
 	void                  assignTexcoord(const MeshObject& info, FbxMesh* mesh);
-	void                  createMaterial(const std::vector<FbxNode*>& nodeList);
+	FbxSurfacePhong*      createMaterial(FbxNode* lNode);
+	FbxFileTexture*       createTexture(const std::string& filename);
+	void                  createMaterial(const MeshObject& info, const std::vector<FbxNode*>& nodeList);
+	std::string           findTexturePath(const MeshObject& info, const std::string& name);
 
 	void initializeSdkObjects();
 	void destroySdkObjects();

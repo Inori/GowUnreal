@@ -2,12 +2,14 @@
 #include "Log.h"
 
 #include <algorithm>
+#include <filesystem>
 
 #ifdef IOS_REF
 #undef IOS_REF
 #define IOS_REF (*(m_manager->GetIOSettings()))
 #endif
 
+namespace fs = std::filesystem;
 
 bool MeshTransform::operator==(const MeshTransform& other)
 {
@@ -40,7 +42,7 @@ void FbxBuilder::addMesh(const MeshObject& mesh)
 	assignTexcoord(mesh, lMesh);
 
 	// Create material for every instance node
-	createMaterial(meshNodes);
+	createMaterial(mesh, meshNodes);
 
 	// Add nodes to root.
 	FbxNode* rootNode = m_scene->GetRootNode();
@@ -140,7 +142,11 @@ FbxMesh* FbxBuilder::createMesh(const MeshObject& mesh)
 		lMesh->EndPolygon();
 	}
 
-	assignNormal(mesh, lMesh);
+	// It seems that normals are dynamically generated
+	// using compute shader or something else,
+	// it's direction is not correct.
+	
+	// assignNormal(mesh, lMesh);
 
 	return lMesh;
 }
@@ -242,7 +248,7 @@ void FbxBuilder::assignTexcoord(const MeshObject& info, FbxMesh* mesh)
 	}
 }
 
-void FbxBuilder::createMaterial(const std::vector<FbxNode*>& nodeList)
+void FbxBuilder::createMaterial(const MeshObject& info, const std::vector<FbxNode*>& nodeList)
 {
 	for (auto& lNode : nodeList)
 	{
@@ -251,15 +257,54 @@ void FbxBuilder::createMaterial(const std::vector<FbxNode*>& nodeList)
 			continue;
 		}
 
-		FbxMesh* pMesh = lNode->GetMesh();
+		auto lMaterial = createMaterial(lNode);
+		if (!lMaterial)
+		{
+			continue;
+		}
 
+		auto diffuse = findTexturePath(info, "_diffuse");
+		if (!diffuse.empty())
+		{
+			auto lDiffuse = createTexture(diffuse);
+			lMaterial->Diffuse.ConnectSrcObject(lDiffuse);
+		}
+
+		auto normal = findTexturePath(info, "_normal");
+		if (!normal.empty())
+		{
+			auto lNormal = createTexture(normal);
+			lMaterial->NormalMap.ConnectSrcObject(lNormal);
+		}
+
+		auto emissive = findTexturePath(info, "_emissive");
+		if (!emissive.empty())
+		{
+			auto lEmissive = createTexture(emissive);
+			lMaterial->Emissive.ConnectSrcObject(lEmissive);
+		}
+
+		lNode->AddMaterial(lMaterial);
+	}
+}
+
+FbxSurfacePhong* FbxBuilder::createMaterial(FbxNode* lNode)
+{
+	FbxSurfacePhong* lMaterial = nullptr;
+	do
+	{
+		FbxMesh* pMesh = lNode->GetMesh();
+		if (!pMesh)
+		{
+			break;
+		}
 		// A texture need to be connected to a property on the material,
 		// so let's use the material (if it exists) or create a new one
-		FbxSurfacePhong* lMaterial = lNode->GetSrcObject<FbxSurfacePhong>(0);
+		lMaterial = lNode->GetSrcObject<FbxSurfacePhong>(0);
 
 		if (lMaterial != NULL)
 		{
-			continue;
+			break;
 		}
 
 		FbxString  lMaterialName = "GowMaterial";
@@ -288,20 +333,49 @@ void FbxBuilder::createMaterial(const std::vector<FbxNode*>& nodeList)
 		lMaterial = FbxSurfacePhong::Create(m_scene, lMaterialName.Buffer());
 
 		// Generate primary and secondary colors.
-		lMaterial->Emissive.Set(lBlack);
-		lMaterial->Ambient.Set(lRed);
+		//lMaterial->Emissive.Set(lBlack);
+		//lMaterial->Ambient.Set(lRed);
 		lMaterial->AmbientFactor.Set(1.);
 		// Add texture for diffuse channel
-		lMaterial->Diffuse.Set(lDiffuseColor);
+		//lMaterial->Diffuse.Set(lDiffuseColor);
 		lMaterial->DiffuseFactor.Set(1.);
 		lMaterial->TransparencyFactor.Set(0.4);
 		lMaterial->ShadingModel.Set(lShadingName);
-		lMaterial->Shininess.Set(0.5);
-		lMaterial->Specular.Set(lBlack);
+		//lMaterial->Shininess.Set(0.5);
+		//lMaterial->Specular.Set(lBlack);
 		lMaterial->SpecularFactor.Set(0.3);
+	} while (false);
+	return lMaterial;
+}
 
-		lNode->AddMaterial(lMaterial);
+FbxFileTexture* FbxBuilder::createTexture(const std::string& filename)
+{
+	auto            basename = fs::path(filename).filename().string();
+	FbxFileTexture* lTexture = FbxFileTexture::Create(m_scene, basename.c_str());
+	// Set texture properties.
+	lTexture->SetFileName(filename.c_str());  // Resource file is in current directory.
+	lTexture->SetTextureUse(FbxTexture::eStandard);
+	lTexture->SetMappingType(FbxTexture::eUV);
+	lTexture->SetMaterialUse(FbxFileTexture::eModelMaterial);
+	lTexture->SetSwapUV(false);
+	lTexture->SetTranslation(0.0, 0.0);
+	lTexture->SetScale(1.0, 1.0);
+	lTexture->SetRotation(0.0, 0.0);
+	lTexture->UVSet.Set(FbxString(m_uvName.c_str()));  // Connect texture to the proper UV
+
+	return lTexture;
+}
+
+std::string FbxBuilder::findTexturePath(const MeshObject& info, const std::string& name)
+{
+	for (const auto& resName : info.textures)
+	{
+		if (resName.find(name) != std::string::npos)
+		{
+			return resName;
+		}
 	}
+	return std::string();
 }
 
 void FbxBuilder::initializeSdkObjects()

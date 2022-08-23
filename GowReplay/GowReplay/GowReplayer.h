@@ -8,6 +8,7 @@
 #include <string>
 #include <set>
 #include <optional>
+#include <map>
 
 struct MeshData : public MeshFormat
 {
@@ -23,6 +24,12 @@ class GowReplayer
 		ShaderConstantType format;
 	};
 
+	struct ResourceTexture
+	{
+		ResourceId  id;
+		std::string name;
+	};
+
 public:
 	GowReplayer();
 	~GowReplayer();
@@ -33,14 +40,15 @@ private:
 	void initialize();
 	void shutdown();
 
-	bool captureLoad(const std::string& capFile);
+	bool captureLoad();
 	void captureUnload();
 
 	void processActions();
 	void iterAction(const ActionDescription& act);
 
-	void extractResource(const ActionDescription& act);
-	void extractMesh(const ActionDescription& act);
+	void                     extractResource(const ActionDescription& act);
+	MeshObject               extractMesh(const ActionDescription& act);
+	std::vector<std::string> extractTexture(const ActionDescription& act);
 
 	std::vector<MeshData>      getMeshAttributes(const ActionDescription& act);
 	std::vector<uint32_t>      getMeshIndices(const MeshData& mesh);
@@ -51,6 +59,8 @@ private:
 		ShaderStage stage, const std::string& name);
 	ResourceBuffer getShaderResourceBuffer(
 		ShaderStage stage, const std::string& name);
+	std::vector<ResourceTexture> getShaderResourceTextures(
+		ShaderStage stage);
 
 	std::vector<float> unpackData(
 		const ResourceFormat& fmt,
@@ -58,13 +68,16 @@ private:
 
 	MeshTransform decomposeTransform(const glm::mat4& modelView);
 
-	std::string getOutFilename(const std::string& inFilename);
+	std::string getOutFilename();
 
 	bool isBoneMesh();
 
 private:
+	std::string          m_capFilename;
 	ICaptureFile*        m_cap    = nullptr;
 	IReplayController*   m_player = nullptr;
 	FbxBuilder           m_fbx;
+
+	std::map<ResourceId, std::string> m_textureCache;
 };
 
