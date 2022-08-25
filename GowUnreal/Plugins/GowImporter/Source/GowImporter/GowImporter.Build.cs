@@ -8,8 +8,9 @@ public class GowImporter : ModuleRules
 	public GowImporter(ReadOnlyTargetRules Target) : base(Target)
 	{
 		PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
-		
-		PublicIncludePaths.AddRange(
+        CppStandard = CppStandardVersion.Cpp17;
+
+        PublicIncludePaths.AddRange(
 			new string[] {
 				// ... add public include paths required here ...
             }
@@ -19,13 +20,8 @@ public class GowImporter : ModuleRules
 		PrivateIncludePaths.AddRange(
 			new string[] {
 				// ... add other private include paths required here ...
-				"ThirdParty/fmt/include",
-                "ThirdParty/glm",
-                "ThirdParty/replay/include",
             }
 			);
-
-		PublicAdditionalLibraries.Add(Path.Combine(ModuleDirectory, "../ThirdParty/replay", "lib", "renderdoc.lib"));
 
 
         PublicDependencyModuleNames.AddRange(
@@ -42,8 +38,10 @@ public class GowImporter : ModuleRules
 			{
 				"CoreUObject",
 				"Engine",
-				"Slate",
-				"SlateCore",
+				//"Slate",
+				//"SlateCore",
+
+				"GowThirdParty"
 				// ... add private dependencies that you statically link with here ...	
 			}
 			);

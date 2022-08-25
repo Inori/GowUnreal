@@ -1,8 +1,6 @@
 #pragma once
 
-THIRD_PARTY_INCLUDES_START
 #include "fmt/format.h"
-THIRD_PARTY_INCLUDES_END
 
 #define LOG_LEVEL_DEBUG   "DEBUG"
 #define LOG_LEVEL_TRACE   "TRACE"

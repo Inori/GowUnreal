@@ -1,4 +1,5 @@
 #include "GowReplayer.h"
+
 #include "Log.h"
 #include "Tools.h"
 
@@ -11,27 +12,22 @@ rdcstr DoStringise(const uint32_t& el)
 	return tmp;
 }
 
+#include "gtc/constants.hpp"
+#include "gtc/matrix_access.hpp"
+#include "gtx/euler_angles.hpp"
+#include "half.hpp"
 #include "pipestate.inl"
 #include "renderdoc_tostr.inl"
 
-#include <thread>
 #include <chrono>
+#include <cmath>
 #include <filesystem>
 #include <map>
-#include <cmath>
-
-THIRD_PARTY_INCLUDES_START
-#include "gtc/matrix_access.hpp"
-#include "gtc/constants.hpp"
-#include "gtx/euler_angles.hpp"
-#include "half.hpp"
-THIRD_PARTY_INCLUDES_END
+#include <thread>
 
 namespace fs = std::filesystem;
 
 REPLAY_PROGRAM_MARKER();
-
-// #pragma comment( lib, "renderdoc.lib" )
 
 GowReplayer::GowReplayer()
 {
@@ -43,7 +39,7 @@ GowReplayer::~GowReplayer()
 	shutdown();
 }
 
-void GowReplayer::replay(const std::string& capFile)
+std::vector<GowResourceObject> GowReplayer::replay(const std::string& capFile)
 {
 	m_capFilename = capFile;
 
@@ -53,8 +49,9 @@ void GowReplayer::replay(const std::string& capFile)
 
 	captureUnload();
 
-	auto outFilename = getOutFilename();
-	//m_fbx.build(outFilename);
+	// auto outFilename = getOutFilename();
+	// m_fbx.build(outFilename);
+	return std::move(m_resources);
 }
 
 void GowReplayer::initialize()
@@ -104,8 +101,8 @@ bool GowReplayer::captureLoad()
 			break;
 		}
 
-		ret  = true;
-	}while(false);
+		ret = true;
+	} while (false);
 
 	if (!ret)
 	{
@@ -187,11 +184,11 @@ void GowReplayer::extractResource(const ActionDescription& act)
 	if (mesh.isValid())
 	{
 		mesh.textures = texList;
-		//m_fbx.addMesh(mesh);
+		m_resources.push_back(mesh);
 	}
 }
 
-MeshObject GowReplayer::extractMesh(const ActionDescription& act)
+GowResourceObject GowReplayer::extractMesh(const ActionDescription& act)
 {
 	LOG_TRACE("Add mesh from event {}", act.eventId);
 	return buildMeshObject(act);
@@ -202,7 +199,7 @@ std::vector<std::string> GowReplayer::extractTexture(const ActionDescription& ac
 	LOG_TRACE("Save texture from event {}", act.eventId);
 
 	std::vector<std::string> result;
-	fs::path outDir = fs::path(m_capFilename).parent_path();
+	fs::path                 outDir = fs::path(m_capFilename).parent_path();
 
 	auto texList = getShaderResourceTextures(ShaderStage::Pixel);
 
@@ -297,7 +294,7 @@ std::vector<MeshData> GowReplayer::getMeshAttributes(const ActionDescription& ac
 		mesh.vertexByteOffset = attr.byteOffset +
 								vb.byteOffset +
 								act.vertexOffset * vb.byteStride;
-		mesh.format = attr.format;
+		mesh.format           = attr.format;
 		mesh.vertexResourceId = vb.resourceId;
 		mesh.vertexByteStride = vb.byteStride;
 
@@ -312,25 +309,24 @@ std::vector<uint32_t> GowReplayer::getMeshIndices(const MeshData& mesh)
 
 	if (mesh.indexResourceId != ResourceId::Null())
 	{
-		auto ibData = m_player->GetBufferData(mesh.indexResourceId, mesh.indexByteOffset, 0);
-		auto offset = mesh.indexOffset * mesh.indexByteStride;
+		auto        ibData = m_player->GetBufferData(mesh.indexResourceId, mesh.indexByteOffset, 0);
+		auto        offset = mesh.indexOffset * mesh.indexByteStride;
 		const void* data   = ibData.data() + offset;
 		std::generate(result.begin(), result.end(), [&, n = 0]() mutable
-		{ 
-			if (mesh.indexByteStride == 2)
-			{
-				return (uint32_t)((const uint16_t*)data)[n++];
-			}
-			else if (mesh.indexByteStride == 4)
-			{
-				return ((const uint32_t*)data)[n++];
-			}
-			else
-			{
-				LOG_ASSERT(false, "unsupported index stride {}", mesh.indexByteStride);
-				return 0u;
-			}
-		});
+					  {
+            if (mesh.indexByteStride == 2)
+            {
+                return (uint32_t)((const uint16_t*)data)[n++];
+            }
+            else if (mesh.indexByteStride == 4)
+            {
+                return ((const uint32_t*)data)[n++];
+            }
+            else
+            {
+                LOG_ASSERT(false, "unsupported index stride {}", mesh.indexByteStride);
+                return 0u;
+            } });
 	}
 	else
 	{
@@ -346,7 +342,7 @@ std::vector<MeshTransform> GowReplayer::getMeshTransforms(const ActionDescriptio
 
 	auto        targets = m_player->GetDisassemblyTargets(true);
 	const auto& format  = targets[0];  // should be DXBC
-	
+
 	// find ModelView matrix
 
 	auto viewData = getShaderConstantVariable(ShaderStage::Vertex, "viewData");
@@ -421,7 +417,7 @@ std::vector<MeshTransform> GowReplayer::getMeshTransforms(const ActionDescriptio
 		glm::mat4 insTransform(0);
 		std::memcpy(&insTransform, data, insBufferInfo.format.members[0].type.arrayByteStride);
 		insTransform[3][3] = 1.0;
-		insTransform = glm::transpose(insTransform);
+		insTransform       = glm::transpose(insTransform);
 
 		// convert quant scale and bias into matrix
 		glm::mat4 quant(1);
@@ -432,7 +428,7 @@ std::vector<MeshTransform> GowReplayer::getMeshTransforms(const ActionDescriptio
 		quant[3][0] += quantBias[0];
 		quant[3][1] += quantBias[1];
 		quant[3][2] += quantBias[2];
-		
+
 		// merge all transform
 		glm::mat4 modelView = view * insTransform * quant;
 
@@ -443,9 +439,9 @@ std::vector<MeshTransform> GowReplayer::getMeshTransforms(const ActionDescriptio
 	return instances;
 }
 
-MeshObject GowReplayer::buildMeshObject(const ActionDescription& act)
+GowResourceObject GowReplayer::buildMeshObject(const ActionDescription& act)
 {
-	MeshObject mesh;
+	GowResourceObject mesh;
 
 	auto meshAttrs = getMeshAttributes(act);
 	if (meshAttrs.empty())
@@ -553,7 +549,7 @@ GowReplayer::ResourceBuffer GowReplayer::getShaderResourceBuffer(
 	// support read-write resource
 
 	ResourceBuffer result = {};
-	result.id = ResourceId::Null();
+	result.id             = ResourceId::Null();
 
 	const auto& state      = m_player->GetPipelineState();
 	auto        rf         = state.GetShaderReflection(stage);
@@ -599,7 +595,7 @@ GowReplayer::ResourceBuffer GowReplayer::getShaderResourceBuffer(
 	return result;
 }
 
-std::vector<GowReplayer::ResourceTexture> 
+std::vector<GowReplayer::ResourceTexture>
 GowReplayer::getShaderResourceTextures(ShaderStage stage)
 {
 	std::vector<ResourceTexture> result;
@@ -704,7 +700,7 @@ std::vector<float> GowReplayer::unpackData(
 	else if (fmtName == "R10G10B10A2_UNORM")
 	{
 		float divisor10 = float(std::exp2(10) - 1);
-		float divisor2 = float(std::exp2(2) - 1);
+		float divisor2  = float(std::exp2(2) - 1);
 
 		uint32_t value = *reinterpret_cast<const uint32_t*>(data);
 		uint16_t r     = bit::extract(value, 9, 0);
@@ -762,7 +758,7 @@ std::vector<float> GowReplayer::unpackData(
 MeshTransform GowReplayer::decomposeTransform(const glm::mat4& modelView)
 {
 	MeshTransform result = {};
-	
+
 	result.translation.x = modelView[3][0];
 	result.translation.y = modelView[3][1];
 	result.translation.z = modelView[3][2];
@@ -777,7 +773,7 @@ MeshTransform GowReplayer::decomposeTransform(const glm::mat4& modelView)
 	glm::column(upper, 0, glm::column(upper, 0) / scaling.x);
 	glm::column(upper, 1, glm::column(upper, 1) / scaling.y);
 	glm::column(upper, 2, glm::column(upper, 2) / scaling.z);
-	
+
 	// default rotation order in FBX SDK is of XYZ, R = Rx * Ry * Rz
 	// so we need to rotate across Z then Y then X
 	glm::mat4 rotation = glm::mat4(upper);
@@ -792,7 +788,7 @@ MeshTransform GowReplayer::decomposeTransform(const glm::mat4& modelView)
 std::string GowReplayer::getOutFilename()
 {
 	std::filesystem::path inPath(m_capFilename);
-	auto outPath = inPath.parent_path() / (inPath.stem().string() + std::string(".fbx"));
+	auto                  outPath = inPath.parent_path() / (inPath.stem().string() + std::string(".fbx"));
 	return outPath.string();
 }
 

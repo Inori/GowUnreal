@@ -3894,9 +3894,9 @@ enum class LogType : uint32_t
 
 // this is OUTSIDE the #endif because we don't declare these in common.h, so in case they're needed
 // we define them here
-DECLARE_REFLECTION_ENUM(LogType);
+//DECLARE_REFLECTION_ENUM(LogType);
 
-ITERABLE_OPERATORS(LogType);
+//ITERABLE_OPERATORS(LogType);
 
 DOCUMENT(R"(The level of optimisation used in
 

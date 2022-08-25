@@ -1,37 +1,15 @@
 #pragma once
 
-#include <glm.hpp>
+#include "GowInterface.h"
+
 #define RENDERDOC_PLATFORM_WIN32
 #include "renderdoc_replay.h"
 
-#include <string>
-#include <set>
-#include <optional>
 #include <map>
-
-struct MeshTransform
-{
-    glm::vec3 translation;
-    glm::vec3 rotation;
-    glm::vec3 scaling;
-};
-
-struct MeshObject
-{
-    uint32_t               eid;
-    std::string            name;
-    std::vector<uint32_t>  indices;
-
-    std::vector<glm::vec3> position;
-    std::vector<glm::vec2> texcoord;
-    std::vector<glm::vec4> tangent;
-    std::vector<glm::vec4> normal;
-
-    std::vector<MeshTransform> instances;
-    std::vector<std::string>   textures;
-
-    bool isValid();
-};
+#include <optional>
+#include <set>
+#include <string>
+#include <vector>
 
 struct MeshData : public MeshFormat
 {
@@ -57,7 +35,7 @@ public:
 	GowReplayer();
 	~GowReplayer();
 
-	void replay(const std::string& capFile);
+	std::vector<GowResourceObject> replay(const std::string& capFile);
 
 private:
 	void initialize();
@@ -70,13 +48,13 @@ private:
 	void iterAction(const ActionDescription& act);
 
 	void                     extractResource(const ActionDescription& act);
-	MeshObject               extractMesh(const ActionDescription& act);
+	GowResourceObject        extractMesh(const ActionDescription& act);
 	std::vector<std::string> extractTexture(const ActionDescription& act);
 
 	std::vector<MeshData>      getMeshAttributes(const ActionDescription& act);
 	std::vector<uint32_t>      getMeshIndices(const MeshData& mesh);
 	std::vector<MeshTransform> getMeshTransforms(const ActionDescription& act);
-	MeshObject                 buildMeshObject(const ActionDescription& act);
+	GowResourceObject          buildMeshObject(const ActionDescription& act);
 
 	std::optional<ShaderVariable> getShaderConstantVariable(
 		ShaderStage stage, const std::string& name);
@@ -96,10 +74,10 @@ private:
 	bool isBoneMesh();
 
 private:
-	std::string          m_capFilename;
-	ICaptureFile*        m_cap    = nullptr;
-	IReplayController*   m_player = nullptr;
+	std::string        m_capFilename;
+	ICaptureFile*      m_cap    = nullptr;
+	IReplayController* m_player = nullptr;
 
 	std::map<ResourceId, std::string> m_textureCache;
+	std::vector<GowResourceObject>    m_resources;
 };
-
