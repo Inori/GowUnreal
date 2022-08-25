@@ -20,16 +20,18 @@ rdcstr DoStringise(const uint32_t& el)
 #include <map>
 #include <cmath>
 
+THIRD_PARTY_INCLUDES_START
 #include "gtc/matrix_access.hpp"
 #include "gtc/constants.hpp"
 #include "gtx/euler_angles.hpp"
 #include "half.hpp"
+THIRD_PARTY_INCLUDES_END
 
 namespace fs = std::filesystem;
 
 REPLAY_PROGRAM_MARKER();
 
-#pragma comment( lib, "renderdoc.lib" )
+// #pragma comment( lib, "renderdoc.lib" )
 
 GowReplayer::GowReplayer()
 {

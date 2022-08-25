@@ -1,8 +1,10 @@
 #pragma once
 
+THIRD_PARTY_INCLUDES_START
 #include <glm.hpp>
 #define RENDERDOC_PLATFORM_WIN32
 #include "renderdoc_replay.h"
+THIRD_PARTY_INCLUDES_END
 
 #include <string>
 #include <set>

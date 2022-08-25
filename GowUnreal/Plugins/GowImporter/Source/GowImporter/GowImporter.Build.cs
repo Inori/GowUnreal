@@ -1,5 +1,6 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
+using System.IO;
 using UnrealBuildTool;
 
 public class GowImporter : ModuleRules
@@ -11,18 +12,23 @@ public class GowImporter : ModuleRules
 		PublicIncludePaths.AddRange(
 			new string[] {
 				// ... add public include paths required here ...
-			}
+            }
 			);
 				
 		
 		PrivateIncludePaths.AddRange(
 			new string[] {
 				// ... add other private include paths required here ...
-			}
+				"ThirdParty/fmt/include",
+                "ThirdParty/glm",
+                "ThirdParty/replay/include",
+            }
 			);
-			
-		
-		PublicDependencyModuleNames.AddRange(
+
+		PublicAdditionalLibraries.Add(Path.Combine(ModuleDirectory, "../ThirdParty/replay", "lib", "renderdoc.lib"));
+
+
+        PublicDependencyModuleNames.AddRange(
 			new string[]
 			{
 				"Core",
