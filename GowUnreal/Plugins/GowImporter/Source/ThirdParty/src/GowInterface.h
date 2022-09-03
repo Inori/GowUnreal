@@ -9,6 +9,8 @@ class GowReplayer;
 
 struct MeshTransform
 {
+	glm::mat4 modelView;
+
     glm::vec3 translation;
     glm::vec3 rotation;
     glm::vec3 scaling;
@@ -18,6 +20,7 @@ struct GowResourceObject
 {
     uint32_t               eid;
     std::string            name;
+	bool                   bone;
     std::vector<uint32_t>  indices;
 
     std::vector<glm::vec3> position;

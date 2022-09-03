@@ -9,6 +9,8 @@ public class GowThirdParty : ModuleRules
 	{
         Type = ModuleType.External;
 
+        PrivateDefinitions.Add("_DEBUG");
+
         PublicIncludePaths.AddRange(
             new string[] {
                 Path.Combine(ModuleDirectory, "src"),

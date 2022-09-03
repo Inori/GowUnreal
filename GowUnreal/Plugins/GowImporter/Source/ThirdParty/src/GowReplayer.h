@@ -70,6 +70,8 @@ private:
 	MeshTransform decomposeTransform(const glm::mat4& modelView);
 
 	std::string getOutFilename();
+	uint32_t    getVertexCount(
+		const std::vector<uint32_t>& indices, uint32_t baseVertex);
 
 	bool isBoneMesh();
 

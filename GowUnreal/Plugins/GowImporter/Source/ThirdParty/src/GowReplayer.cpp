@@ -450,9 +450,10 @@ GowResourceObject GowReplayer::buildMeshObject(const ActionDescription& act)
 		return mesh;
 	}
 
-	mesh.eid     = act.eventId;
-	mesh.name    = fmt::format("EID_{}", act.eventId);
-	mesh.indices = getMeshIndices(meshAttrs.front());
+	mesh.eid          = act.eventId;
+	mesh.name         = fmt::format("EID_{}", act.eventId);
+	mesh.indices      = getMeshIndices(meshAttrs.front());
+	uint32_t vtxCount = getVertexCount(mesh.indices, meshAttrs.front().baseVertex);
 
 	// cache the vertex buffer
 	std::map<ResourceId, bytebuf> vtxCache;
@@ -466,7 +467,8 @@ GowResourceObject GowReplayer::buildMeshObject(const ActionDescription& act)
 		auto& buffer = vtxCache[attr.vertexResourceId];
 		auto  offset = attr.vertexByteOffset;
 		auto  stride = attr.vertexByteStride;
-		auto  count  = buffer.size() / stride;
+		//auto  count  = buffer.size() / stride;
+		auto count = vtxCount;
 
 		for (size_t i = 0; i != count; ++i)
 		{
@@ -759,6 +761,8 @@ MeshTransform GowReplayer::decomposeTransform(const glm::mat4& modelView)
 {
 	MeshTransform result = {};
 
+	result.modelView = modelView;
+
 	result.translation.x = modelView[3][0];
 	result.translation.y = modelView[3][1];
 	result.translation.z = modelView[3][2];
@@ -790,6 +794,19 @@ std::string GowReplayer::getOutFilename()
 	std::filesystem::path inPath(m_capFilename);
 	auto                  outPath = inPath.parent_path() / (inPath.stem().string() + std::string(".fbx"));
 	return outPath.string();
+}
+
+uint32_t GowReplayer::getVertexCount(const std::vector<uint32_t>& indices, uint32_t baseVertex)
+{
+	uint32_t maxIndex = 0;
+	for (uint32_t idx : indices)
+	{
+		if (idx > maxIndex)
+		{
+			maxIndex = idx;
+		}
+	}
+	return maxIndex + baseVertex + 1;
 }
 
 bool GowReplayer::isBoneMesh()
