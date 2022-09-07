@@ -4,8 +4,7 @@
 #include "GowInterface.h"
 #include "UObject/SavePackage.h"
 #include "Engine/StaticMesh.h"
-#define RAWMESH_API DLLIMPORT
-#include "RawMesh/Public/RawMesh.h"
+#include "RawMesh.h"
 
 
 #define LOG_DEBUG(format, ...) UE_LOG(LogGowImporterPlugin, Display, TEXT(format), __VA_ARGS__)
