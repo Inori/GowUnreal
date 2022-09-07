@@ -4,7 +4,7 @@
 #include "GowInterface.h"
 #include "UObject/SavePackage.h"
 #include "Engine/StaticMesh.h"
-#include "RawMesh.h"
+#include "RawMesh/Public/RawMesh.h"
 
 
 #define LOG_DEBUG(format, ...) UE_LOG(LogGowImporterPlugin, Display, TEXT(format), __VA_ARGS__)
@@ -74,6 +74,7 @@ UStaticMesh* UGowImportCommandlet::CreateMesh(const GowResourceObject& obj)
     FString ObjectName = FString(obj.name.c_str());
 
     FRawMesh RawMesh = {};
+    
     // Vertex
     for (const auto& pos : obj.position)
     {
