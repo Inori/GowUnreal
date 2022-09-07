@@ -41,6 +41,7 @@ public class GowImporter : ModuleRules
 				//"Slate",
 				//"SlateCore",
 				"RawMesh",
+				"UnrealEd",
 				"GowThirdParty"
 				// ... add private dependencies that you statically link with here ...	
 			}

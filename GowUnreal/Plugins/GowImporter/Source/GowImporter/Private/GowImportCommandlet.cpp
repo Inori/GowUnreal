@@ -5,6 +5,10 @@
 #include "UObject/SavePackage.h"
 #include "Engine/StaticMesh.h"
 #include "RawMesh/Public/RawMesh.h"
+#include "PackageHelperFunctions.h"
+#include "Components/InstancedStaticMeshComponent.h"
+#include "Math/Matrix.h"
+#include "Math/TransformNonVectorized.h"
 
 
 #define LOG_DEBUG(format, ...) UE_LOG(LogGowImporterPlugin, Display, TEXT(format), __VA_ARGS__)
@@ -44,34 +48,60 @@ int32 UGowImportCommandlet::Main(const FString& Params)
 
         for (const auto& res : Resources)
 		{
-			CreateMesh(res);
+			auto Package = CreateAssetPackage(res);
+			if (Package == nullptr)
+			{
+				LOG_DEBUG("Create package failed.");
+				continue;
+			}
+
+			auto Mesh = CreateMesh(Package, res);
+
+            CreateInstances(Package, Mesh, res);
+
+            SavePackage(Package);
 		}
-        
-        //FString AssetPath = TEXT("/Game/Gow/");
-        //FString MeshName = TEXT("TestMesh");
-        //AssetPath += MeshName;
-        //UPackage* Package = CreatePackage(NULL, *AssetPath);
-        //Package->FullyLoad();
-
-        //UStaticMesh* NewStaticMesh = NewObject<UStaticMesh>(Package, FName(*MeshName), RF_Public | RF_Standalone);
-
-        //Package->MarkPackageDirty();
-        //FAssetRegistryModule::AssetCreated(NewStaticMesh);
-        ////通过 asset 路径获取包中文件名
-        //FString PackageFileName = FPackageName::LongPackageNameToFilename(AssetPath, FPackageName::GetAssetPackageExtension());
-        ////进行保存
-        //bool bSaved = UPackage::SavePackage(Package, NewStaticMesh, EObjectFlags::RF_Public | EObjectFlags::RF_Standalone, *PackageFileName, GError, nullptr, true, true, SAVE_NoError);
-
 
     } while (false);
 
     return 0;
 }
 
-UStaticMesh* UGowImportCommandlet::CreateMesh(const GowResourceObject& obj)
+UPackage* UGowImportCommandlet::CreateAssetPackage(const GowResourceObject& obj)
+{
+	// Create Package
+	FString ObjectName  = FString(obj.name.c_str());
+	FString PackagePath = FString("/Game/Gow/");
+	FString AssetPath   = PackagePath + ObjectName;
+
+	UPackage* Package = CreatePackage(*AssetPath);
+	Package->FullyLoad();
+	return Package;
+}
+
+void UGowImportCommandlet::SavePackage(UPackage* Package)
+{
+	Package->MarkPackageDirty();
+
+	//FSavePackageArgs SaveArgs   = {};
+	//SaveArgs.TopLevelFlags      = EObjectFlags::RF_Public | EObjectFlags::RF_Standalone;
+	//SaveArgs.bForceByteSwapping = true;
+	//SaveArgs.SaveFlags          = SAVE_NoError;
+	//SaveArgs.FinalTimeStamp     = FDateTime::MinValue();
+
+	//UPackage::SavePackage(Package, myStaticMesh, *PackageFileName, SaveArgs);
+
+    FString FolderName      = Package->GetFolderName().ToString();
+	FString PackageFileName = FPackageName::LongPackageNameToFilename(FolderName, FPackageName::GetAssetPackageExtension());
+
+	SavePackageHelper(Package, PackageFileName);
+	LOG_DEBUG("StaticMesh saved: %s", *PackageFileName);
+}
+
+UStaticMesh* UGowImportCommandlet::CreateMesh(UPackage* Package, const GowResourceObject& obj)
 {
     // Object Details
-    FString ObjectName = FString(obj.name.c_str());
+	FString ObjectName = FString(obj.name.c_str()) + ".mesh";
 
     FRawMesh RawMesh = {};
     
@@ -110,61 +140,57 @@ UStaticMesh* UGowImportCommandlet::CreateMesh(const GowResourceObject& obj)
 		RawMesh.FaceSmoothingMasks.Add(0xFFFFFFFF);  // Phong
     }
 
-    // Create Package
-	FString PackagePath     = FString("/Game/Gow/");
-	FString AssetPath       = PackagePath + ObjectName;
-	FString PackageFileName = FPackageName::LongPackageNameToFilename(AssetPath, FPackageName::GetAssetPackageExtension());
-
-    UPackage* Package = CreatePackage(*AssetPath);
-	Package->FullyLoad();
-
     // Create Static Mesh
 	UStaticMesh* myStaticMesh = NewObject<UStaticMesh>(Package, FName(*ObjectName), RF_Public | RF_Standalone);
 
     myStaticMesh->GetStaticMaterials().Add(FStaticMaterial());
 	myStaticMesh->GetSectionInfoMap().Set(0, 0, FMeshSectionInfo(0));
 
-    if (myStaticMesh != NULL)
-    {
-        // Saving mesh in the StaticMesh
-		FStaticMeshSourceModel& SrcModel = myStaticMesh->AddSourceModel();
-        // Model Configuration
-		SrcModel.BuildSettings.bRecomputeNormals             = true;
-		SrcModel.BuildSettings.bRecomputeTangents            = true;
-		SrcModel.BuildSettings.bUseMikkTSpace                = false;
-		SrcModel.BuildSettings.bGenerateLightmapUVs          = true;
-		SrcModel.BuildSettings.bBuildReversedIndexBuffer     = false;
-		SrcModel.BuildSettings.bUseFullPrecisionUVs          = false;
-		SrcModel.BuildSettings.bUseHighPrecisionTangentBasis = false;
-		SrcModel.SaveRawMesh(RawMesh);
+    // Saving mesh in the StaticMesh
+	FStaticMeshSourceModel& SrcModel = myStaticMesh->AddSourceModel();
+	// Model Configuration
+	SrcModel.BuildSettings.bRecomputeNormals             = true;
+	SrcModel.BuildSettings.bRecomputeTangents            = true;
+	SrcModel.BuildSettings.bUseMikkTSpace                = false;
+	SrcModel.BuildSettings.bGenerateLightmapUVs          = true;
+	SrcModel.BuildSettings.bBuildReversedIndexBuffer     = false;
+	SrcModel.BuildSettings.bUseFullPrecisionUVs          = false;
+	SrcModel.BuildSettings.bUseHighPrecisionTangentBasis = false;
+	SrcModel.SaveRawMesh(RawMesh);
 
-        // Assign the Materials to the Slots (optional
+	// Processing the StaticMesh and Marking it as not saved
+	myStaticMesh->ImportVersion = EImportStaticMeshVersion::LastVersion;
+	myStaticMesh->CreateBodySetup();
+	myStaticMesh->SetLightingGuid();
+	myStaticMesh->PostEditChange();
 
-        //for (int32 MaterialID = 0; MaterialID < numberOfMaterials; MaterialID++)
-		//{
-		//	myStaticMesh->StaticMaterials.Add(Materials[MaterialID]);
-		//	myStaticMesh->SectionInfoMap.Set(0, MaterialID, FMeshSectionInfo(MaterialID));
-		//}
-
-        // Processing the StaticMesh and Marking it as not saved
-        myStaticMesh->ImportVersion = EImportStaticMeshVersion::LastVersion;
-        myStaticMesh->CreateBodySetup();
-        myStaticMesh->SetLightingGuid();
-        myStaticMesh->PostEditChange();
-
-        Package->MarkPackageDirty();
-		FAssetRegistryModule::AssetCreated(myStaticMesh);
-
-        FSavePackageArgs SaveArgs   = {};
-		SaveArgs.TopLevelFlags      = EObjectFlags::RF_Public | EObjectFlags::RF_Standalone;
-		SaveArgs.bForceByteSwapping = true;
-		SaveArgs.SaveFlags          = SAVE_NoError;
-		SaveArgs.FinalTimeStamp     = FDateTime::MinValue();
-
-		UPackage::SavePackage(Package, myStaticMesh, *PackageFileName, SaveArgs);
-
-        LOG_DEBUG("StaticMesh saved: %s", *ObjectName);
-    };
+	FAssetRegistryModule::AssetCreated(myStaticMesh);
 
     return myStaticMesh;
+}
+
+void UGowImportCommandlet::CreateInstances(UPackage* Package, UStaticMesh* Mesh, const GowResourceObject& obj)
+{
+	FString                        ObjectName = FString(obj.name.c_str()) + ".comp";
+	UInstancedStaticMeshComponent* Component  = NewObject<UInstancedStaticMeshComponent>(Package, FName(*ObjectName), RF_Public | RF_Standalone);
+
+	auto convertMatrix = [](const glm::mat4& in) 
+	{
+		FMatrix out;
+		for (int r = 0; r != 4; ++r)
+		{
+			for (int c = 0; c != 4; ++c)
+			{
+				out.M[r][c] = in[r][c];
+			}
+		}
+		return out;
+	};
+
+	for (const auto& trs : obj.instances)
+	{
+		FMatrix    modelView = convertMatrix(trs.modelView);
+		FTransform objectTrasform(modelView);
+		Component->AddInstance(objectTrasform, true);
+	}
 }
