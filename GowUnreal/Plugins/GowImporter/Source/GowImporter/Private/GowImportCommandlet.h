@@ -25,8 +25,8 @@ public:
 	int32 Main(const FString& Params) override;
 
 private:
-	UPackage*    CreateAssetPackage(const GowResourceObject& obj);
-	void         SavePackage(UPackage* Package);
+	UPackage* CreateAssetPackage(const GowResourceObject& obj);
+	void      SavePackage(UPackage* Package);
 
 	UStaticMesh* CreateMesh(UPackage* Package, const GowResourceObject& obj);
 	void         CreateInstances(UPackage* Package, UStaticMesh* Mesh, const GowResourceObject& obj);
