@@ -1,6 +1,7 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
 #include "GowImporter.h"
+#include "GowImporterCommon.h"
 #include "GowImporterStyle.h"
 #include "GowImporterCommands.h"
 #include "LevelEditor.h"
@@ -39,16 +40,24 @@ void FGowImporterModule::ShutdownModule()
 	FGowImporterStyle::Shutdown();
 
 	FGowImporterCommands::Unregister();
+
+	if (BuilderThread)
+	{
+		BuilderThread->Kill();
+		delete BuilderThread;
+	}
+
+	if (SceneBuilder)
+	{
+		delete SceneBuilder;
+	}
 }
 
 void FGowImporterModule::PluginButtonClicked()
 {
-	// Put your "OnButtonClicked" stuff here
-	FText DialogText = FText::Format(
-		LOCTEXT("PluginButtonDialogText", "Add code to {0} in {1} to override this button's actions"),
-		FText::FromString(TEXT("FPLUGIN_NAMEModule::PluginButtonClicked()")),
-		FText::FromString(TEXT("PLUGIN_NAME.cpp")));
-	FMessageDialog::Open(EAppMsgType::Ok, DialogText);
+	LOG_DEBUG("Start Gow builder thread");
+	SceneBuilder  = new GowSceneBuilder();
+	BuilderThread = FRunnableThread::Create(SceneBuilder, TEXT("GowBuilderThread"));
 }
 
 void FGowImporterModule::RegisterMenus()

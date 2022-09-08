@@ -11,8 +11,6 @@
 #include "Math/TransformNonVectorized.h"
 
 
-#define LOG_DEBUG(format, ...) UE_LOG(LogGowImporterPlugin, Display, TEXT(format), __VA_ARGS__)
-
 UGowImportCommandlet::UGowImportCommandlet()
 {
     IsClient = false;
