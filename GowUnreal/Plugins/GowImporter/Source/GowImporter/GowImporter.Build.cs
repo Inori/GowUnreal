@@ -36,13 +36,17 @@ public class GowImporter : ModuleRules
 		PrivateDependencyModuleNames.AddRange(
 			new string[]
 			{
+				"Projects",
 				"CoreUObject",
 				"Engine",
-				//"Slate",
-				//"SlateCore",
+				"Slate",
+				"SlateCore",
 				"RawMesh",
 				"UnrealEd",
-				"GowThirdParty"
+				"ToolMenus",
+                "InputCore",
+                "EditorFramework",
+                "GowThirdParty"
 				// ... add private dependencies that you statically link with here ...	
 			}
 			);

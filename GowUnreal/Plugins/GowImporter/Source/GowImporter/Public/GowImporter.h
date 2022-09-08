@@ -12,4 +12,13 @@ public:
 	/** IModuleInterface implementation */
 	virtual void StartupModule() override;
 	virtual void ShutdownModule() override;
+
+	void PluginButtonClicked();
+
+private:
+
+	void RegisterMenus();
+
+private:
+	TSharedPtr<class FUICommandList> PluginCommands;
 };
