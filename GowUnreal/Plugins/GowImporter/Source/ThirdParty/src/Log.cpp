@@ -20,8 +20,8 @@ uint32_t getTid()
 
 void printDebugString(const char* str)
 {
-	//OutputDebugStringA(str);
-	fmt::print(str);
+	OutputDebugStringA(str);
+	//fmt::print(str);
 }
 
 void vlog(const char* level, const char* function, int line, fmt::string_view format, fmt::format_args args)

@@ -10,6 +10,7 @@
 #include "Math/Matrix.h"
 #include "Math/TransformNonVectorized.h"
 
+#pragma optimize("", off)
 
 UGowImportCommandlet::UGowImportCommandlet()
 {
@@ -81,15 +82,7 @@ void UGowImportCommandlet::SavePackage(UPackage* Package)
 {
 	Package->MarkPackageDirty();
 
-	//FSavePackageArgs SaveArgs   = {};
-	//SaveArgs.TopLevelFlags      = EObjectFlags::RF_Public | EObjectFlags::RF_Standalone;
-	//SaveArgs.bForceByteSwapping = true;
-	//SaveArgs.SaveFlags          = SAVE_NoError;
-	//SaveArgs.FinalTimeStamp     = FDateTime::MinValue();
-
-	//UPackage::SavePackage(Package, myStaticMesh, *PackageFileName, SaveArgs);
-
-    FString FolderName      = Package->GetFolderName().ToString();
+    FString FolderName      = Package->GetName();
 	FString PackageFileName = FPackageName::LongPackageNameToFilename(FolderName, FPackageName::GetAssetPackageExtension());
 
 	SavePackageHelper(Package, PackageFileName);
@@ -99,7 +92,7 @@ void UGowImportCommandlet::SavePackage(UPackage* Package)
 UStaticMesh* UGowImportCommandlet::CreateMesh(UPackage* Package, const GowResourceObject& obj)
 {
     // Object Details
-	FString ObjectName = FString(obj.name.c_str()) + ".mesh";
+	FString ObjectName = FString(obj.name.c_str()) + ".Mesh";
 
     FRawMesh RawMesh = {};
     
@@ -169,7 +162,7 @@ UStaticMesh* UGowImportCommandlet::CreateMesh(UPackage* Package, const GowResour
 
 void UGowImportCommandlet::CreateInstances(UPackage* Package, UStaticMesh* Mesh, const GowResourceObject& obj)
 {
-	FString                        ObjectName = FString(obj.name.c_str()) + ".comp";
+	FString                        ObjectName = FString(obj.name.c_str()) + ".Comp";
 	UInstancedStaticMeshComponent* Component  = NewObject<UInstancedStaticMeshComponent>(Package, FName(*ObjectName), RF_Public | RF_Standalone);
 
 	auto convertMatrix = [](const glm::mat4& in) 
@@ -192,3 +185,5 @@ void UGowImportCommandlet::CreateInstances(UPackage* Package, UStaticMesh* Mesh,
 		Component->AddInstance(objectTrasform, true);
 	}
 }
+
+#pragma optimize("", on)
