@@ -10,6 +10,7 @@
 #include "Widgets/Text/STextBlock.h"
 #include "ToolMenus.h"
 #include "Misc/MessageDialog.h"
+#include "GowSceneBuilder.h"
 
 #define LOCTEXT_NAMESPACE "FGowImporterModule"
 
@@ -40,24 +41,14 @@ void FGowImporterModule::ShutdownModule()
 	FGowImporterStyle::Shutdown();
 
 	FGowImporterCommands::Unregister();
-
-	if (BuilderThread)
-	{
-		BuilderThread->Kill();
-		delete BuilderThread;
-	}
-
-	if (SceneBuilder)
-	{
-		delete SceneBuilder;
-	}
 }
 
 void FGowImporterModule::PluginButtonClicked()
 {
 	LOG_DEBUG("Start Gow builder thread");
-	SceneBuilder  = new GowSceneBuilder();
-	BuilderThread = FRunnableThread::Create(SceneBuilder, TEXT("GowBuilderThread"));
+
+	GowSceneBuilder SceneBuilder;
+	SceneBuilder.Build();
 }
 
 void FGowImporterModule::RegisterMenus()

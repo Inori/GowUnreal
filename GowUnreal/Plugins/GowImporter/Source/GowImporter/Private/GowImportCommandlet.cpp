@@ -92,7 +92,7 @@ void UGowImportCommandlet::SavePackage(UPackage* Package)
 UStaticMesh* UGowImportCommandlet::CreateMesh(UPackage* Package, const GowResourceObject& obj)
 {
     // Object Details
-	FString ObjectName = FString(obj.name.c_str()) + ".Mesh";
+	FString ObjectName = "Mesh";
 
     FRawMesh RawMesh = {};
     
@@ -162,7 +162,7 @@ UStaticMesh* UGowImportCommandlet::CreateMesh(UPackage* Package, const GowResour
 
 void UGowImportCommandlet::CreateInstances(UPackage* Package, UStaticMesh* Mesh, const GowResourceObject& obj)
 {
-	FString                        ObjectName = FString(obj.name.c_str()) + ".Comp";
+	FString                        ObjectName = "InstancedComponent";
 	UInstancedStaticMeshComponent* Component  = NewObject<UInstancedStaticMeshComponent>(Package, FName(*ObjectName), RF_Public | RF_Standalone);
 
 	auto convertMatrix = [](const glm::mat4& in) 

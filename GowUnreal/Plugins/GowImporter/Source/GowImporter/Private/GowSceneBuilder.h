@@ -1,23 +1,27 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "HAL/Runnable.h"
+#include "AssetRegistryModule.h"
 
-class GowSceneBuilder : public FRunnable
+struct GowObject
+{
+	UStaticMesh* Mesh;
+	UInstancedStaticMeshComponent* Instances;
+};
+
+class GowSceneBuilder
 {
 public:
 	GowSceneBuilder();
 	~GowSceneBuilder();
 
-	bool Init() override;
-
-	void Stop() override;
-
-	void Exit() override;
-
-	uint32 Run() override;
+	void Build();
 
 private:
-	bool bStop = false;
+	GowObject PopulateGowObject(const TArray<FAssetData>& AssetList);
+	void PlaceObjectInScene(const GowObject& Object);
+
+private:
+
 };
 

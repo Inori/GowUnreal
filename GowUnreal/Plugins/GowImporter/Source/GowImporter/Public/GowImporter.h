@@ -4,7 +4,6 @@
 
 #include "CoreMinimal.h"
 #include "Modules/ModuleManager.h"
-#include "GowSceneBuilder.h"
 
 class FGowImporterModule : public IModuleInterface
 {
@@ -22,6 +21,4 @@ private:
 
 private:
 	TSharedPtr<class FUICommandList> PluginCommands;
-	FRunnableThread*                 BuilderThread;
-	GowSceneBuilder*                 SceneBuilder;
 };
