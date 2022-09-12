@@ -92,7 +92,9 @@ void UGowImportCommandlet::SavePackage(UPackage* Package)
 UStaticMesh* UGowImportCommandlet::CreateMesh(UPackage* Package, const GowResourceObject& obj)
 {
     // Object Details
-	FString ObjectName = "Mesh";
+	auto    PackagePath = Package->GetName();
+	auto    PackageName = FPaths::GetBaseFilename(PackagePath);
+	FString ObjectName  = FString::Printf(TEXT("SM_%s"), *PackageName);
 
     FRawMesh RawMesh = {};
     
@@ -162,8 +164,10 @@ UStaticMesh* UGowImportCommandlet::CreateMesh(UPackage* Package, const GowResour
 
 void UGowImportCommandlet::CreateInstances(UPackage* Package, UStaticMesh* Mesh, const GowResourceObject& obj)
 {
-	FString                        ObjectName = "InstancedComponent";
-	UInstancedStaticMeshComponent* Component  = NewObject<UInstancedStaticMeshComponent>(Package, FName(*ObjectName), RF_Public | RF_Standalone);
+	auto                           PackagePath = Package->GetName();
+	auto                           PackageName = FPaths::GetBaseFilename(PackagePath);
+	FString                        ObjectName  = FString::Printf(TEXT("ISC_%s"), *PackageName);
+	UInstancedStaticMeshComponent* Component   = NewObject<UInstancedStaticMeshComponent>(Package, FName(*ObjectName), RF_Public | RF_Standalone);
 
 	auto convertMatrix = [](const glm::mat4& in) 
 	{
@@ -180,9 +184,13 @@ void UGowImportCommandlet::CreateInstances(UPackage* Package, UStaticMesh* Mesh,
 
 	for (const auto& trs : obj.instances)
 	{
-		FMatrix    modelView = convertMatrix(trs.modelView);
-		FTransform objectTrasform(modelView);
-		Component->AddInstance(objectTrasform, true);
+		FMatrix modelView = convertMatrix(trs.modelView);
+		// FVector    Position(trs.translation[0], trs.translation[1], trs.translation[2]);
+		// FRotator   Rotation(trs.rotation[0], trs.rotation[1], trs.rotation[2]);
+		// FVector    Scaling(trs.scaling[0], trs.scaling[1], trs.scaling[2]);
+		// FTransform ObjectTrasform(Rotation, Position, Scaling);
+		FTransform ObjectTrasform(modelView);
+		Component->AddInstance(ObjectTrasform, true);
 	}
 }
 

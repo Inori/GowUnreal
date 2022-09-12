@@ -5,8 +5,8 @@
 
 struct GowObject
 {
-	UStaticMesh* Mesh;
-	UInstancedStaticMeshComponent* Instances;
+	UStaticMesh*                   Mesh;
+	UInstancedStaticMeshComponent* InstancedComponent;
 };
 
 class GowSceneBuilder

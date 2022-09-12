@@ -783,6 +783,7 @@ MeshTransform GowReplayer::decomposeTransform(const glm::mat4& modelView)
 	glm::mat4 rotation = glm::mat4(upper);
 	glm::vec3 radians  = {};
 	glm::extractEulerAngleZYX(rotation, radians.z, radians.y, radians.x);
+	//glm::extractEulerAngleXYZ(rotation, radians.x, radians.y, radians.z);
 
 	result.rotation = glm::degrees(radians);
 
