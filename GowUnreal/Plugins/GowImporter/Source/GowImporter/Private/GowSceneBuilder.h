@@ -21,6 +21,8 @@ private:
 	GowObject PopulateGowObject(const TArray<FAssetData>& AssetList);
 	void PlaceObjectInScene(const GowObject& Object);
 
+	FTransform ConvertTransform(const FTransform& TransRH);
+
 private:
 
 };

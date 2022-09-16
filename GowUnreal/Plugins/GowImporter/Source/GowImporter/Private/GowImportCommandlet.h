@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <glm.hpp>
 #include "Commandlets/Commandlet.h"
 #include "GowImportCommandlet.generated.h"
 

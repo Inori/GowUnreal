@@ -10,6 +10,11 @@
 #include "Math/Matrix.h"
 #include "Math/TransformNonVectorized.h"
 
+#include <glm.hpp>
+#include <gtc/constants.hpp>
+#include <gtc/matrix_access.hpp>
+#include <gtx/euler_angles.hpp>
+
 #pragma optimize("", off)
 
 UGowImportCommandlet::UGowImportCommandlet()
@@ -98,10 +103,18 @@ UStaticMesh* UGowImportCommandlet::CreateMesh(UPackage* Package, const GowResour
 
     FRawMesh RawMesh = {};
     
+	auto convertPos = [](const glm::vec3& in) 
+	{
+		return FVector3f(in.x, in.z, in.y);
+	};
+
     // Vertex
     for (const auto& pos : obj.position)
-    {
-		RawMesh.VertexPositions.Add(FVector3f(pos[0], pos[1], pos[2]));
+    {		
+		// The original vertices coordinate is Y-up-Right-hand,
+		// we need to convert it to Z-up-Left-hand,
+		// so swap Y and Z
+		RawMesh.VertexPositions.Add(convertPos(pos));
     }
     // Index
     for (const auto idx : obj.indices)
@@ -169,7 +182,7 @@ void UGowImportCommandlet::CreateInstances(UPackage* Package, UStaticMesh* Mesh,
 	FString                        ObjectName  = FString::Printf(TEXT("ISC_%s"), *PackageName);
 	UInstancedStaticMeshComponent* Component   = NewObject<UInstancedStaticMeshComponent>(Package, FName(*ObjectName), RF_Public | RF_Standalone);
 
-	auto convertMatrix = [](const glm::mat4& in) 
+	auto convertMatrix = [](const glm::mat4& in)
 	{
 		FMatrix out;
 		for (int r = 0; r != 4; ++r)
@@ -185,10 +198,6 @@ void UGowImportCommandlet::CreateInstances(UPackage* Package, UStaticMesh* Mesh,
 	for (const auto& trs : obj.instances)
 	{
 		FMatrix modelView = convertMatrix(trs.modelView);
-		// FVector    Position(trs.translation[0], trs.translation[1], trs.translation[2]);
-		// FRotator   Rotation(trs.rotation[0], trs.rotation[1], trs.rotation[2]);
-		// FVector    Scaling(trs.scaling[0], trs.scaling[1], trs.scaling[2]);
-		// FTransform ObjectTrasform(Rotation, Position, Scaling);
 		FTransform ObjectTrasform(modelView);
 		Component->AddInstance(ObjectTrasform, true);
 	}
