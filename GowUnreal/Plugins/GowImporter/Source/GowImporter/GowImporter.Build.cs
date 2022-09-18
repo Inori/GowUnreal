@@ -46,7 +46,9 @@ public class GowImporter : ModuleRules
 				"ToolMenus",
                 "InputCore",
                 "EditorFramework",
-                "GowThirdParty"
+				"StaticMeshDescription",
+				"MeshDescription",
+				"GowThirdParty"
 				// ... add private dependencies that you statically link with here ...	
 			}
 			);

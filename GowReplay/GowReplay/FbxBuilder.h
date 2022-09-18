@@ -44,14 +44,18 @@ public:
 	void build(const std::string& filename);
 
 private:
-	FbxMesh*              createMesh(const MeshObject& mesh);
-	std::vector<FbxNode*> createInstances(const MeshObject& info, FbxMesh* mesh);
-	void                  assignNormal(const MeshObject& info, FbxMesh* mesh);
-	void                  assignTexcoord(const MeshObject& info, FbxMesh* mesh);
-	FbxSurfacePhong*      createMaterial(FbxNode* lNode);
-	FbxFileTexture*       createTexture(const std::string& filename);
-	void                  createMaterial(const MeshObject& info, const std::vector<FbxNode*>& nodeList);
-	std::string           findTexturePath(const MeshObject& info, const std::string& name);
+	FbxMesh*               createMesh(const MeshObject& mesh);
+	std::vector<FbxNode*>  createInstances(const MeshObject& info, FbxMesh* mesh);
+	void                   assignNormal(const MeshObject& info, FbxMesh* mesh);
+	void                   assignTexcoord(const MeshObject& info, FbxMesh* mesh);
+	FbxSurfacePhong*       createMaterial(FbxNode* lNode);
+	FbxFileTexture*        createTexture(const std::string& filename);
+	void                   createMaterial(const MeshObject& info, const std::vector<FbxNode*>& nodeList);
+	std::string            findTexturePath(const MeshObject& info, const std::string& name);
+	std::vector<glm::vec3> ComputeNormalsWeightedByAngle(
+		const std::vector<uint32_t>&  indices,
+		const std::vector<glm::vec3>& positions,
+		bool                          cw);
 
 	void initializeSdkObjects();
 	void destroySdkObjects();

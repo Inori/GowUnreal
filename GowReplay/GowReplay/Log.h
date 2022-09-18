@@ -29,7 +29,7 @@ void logAssert(const char* expression, const char* function, const char* sourceP
 #define _LOG_ASSERT_(expr, format, ...) (void)(!!(expr) || (logAssert(#expr, __FUNCTION__, __FILE__, __LINE__, format, __VA_ARGS__), 0))
 
 
-#ifdef _DEBUG
+#ifndef _DEBUG
 
 #define LOG_DEBUG(format, ...)        _LOG_PRINT_(LOG_LEVEL_DEBUG, format, __VA_ARGS__)
 #define LOG_TRACE(format, ...)        _LOG_PRINT_(LOG_LEVEL_TRACE, format, __VA_ARGS__)

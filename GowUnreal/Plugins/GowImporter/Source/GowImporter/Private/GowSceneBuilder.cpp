@@ -6,6 +6,8 @@
 #include "Editor/EditorEngine.h"
 #include "EditorModeManager.h"
 #include "Engine/StaticMeshActor.h"
+#include "RawMesh/Public/RawMesh.h"
+#include "StaticMeshAttributes.h"
 
 #include <glm.hpp>
 #include <gtc/constants.hpp>
@@ -45,6 +47,11 @@ void GowSceneBuilder::Build()
 
 		AssetMap.MultiFind(PackageName, Assets);
 		auto Object = PopulateGowObject(Assets);
+
+		if (Object.Mesh == nullptr || Object.InstancedComponent == nullptr)
+		{
+			continue;
+		}
 
 		PlaceObjectInScene(Object);
 	}
@@ -168,7 +175,9 @@ FTransform GowSceneBuilder::ConvertTransform(const FTransform& TransRH)
 	glm::vec3 radians  = {};
 	glm::extractEulerAngleZYX(rotation, radians.z, radians.y, radians.x);
 	glm::vec3 euler = glm::degrees(radians);
+
 	// Unreal Transform, left hand
+	float UniformScale = 500.0 / 5.5;
 
 	// Translation
 	FVector Position;
@@ -188,7 +197,7 @@ FTransform GowSceneBuilder::ConvertTransform(const FTransform& TransRH)
 	// Scale
 	FVector Scale(scaling.x, scaling.y, scaling.z);  
 
-	FTransform OutTransform(Rotation, Position, Scale);
+	FTransform OutTransform(Rotation, Position * UniformScale, Scale * UniformScale);
 	return OutTransform;
 }
 

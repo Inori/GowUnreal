@@ -146,7 +146,7 @@ FbxMesh* FbxBuilder::createMesh(const MeshObject& mesh)
 	// using compute shader or something else,
 	// it's direction is not correct.
 	
-	// assignNormal(mesh, lMesh);
+	assignNormal(mesh, lMesh);
 
 	return lMesh;
 }
@@ -182,10 +182,15 @@ std::vector<FbxNode*> FbxBuilder::createInstances(const MeshObject& info, FbxMes
 
 void FbxBuilder::assignNormal(const MeshObject& info, FbxMesh* mesh)
 {
-	if (info.normal.empty())
-	{
-		return;
-	}
+	//if (info.normal.empty())
+	//{
+	//	return;
+	//}
+
+	auto normals = ComputeNormalsWeightedByAngle(
+		info.indices,
+		info.position,
+		true);
 
 	FbxLayer* lLayer = mesh->GetLayer(0);
 	if (lLayer == NULL)
@@ -206,12 +211,12 @@ void FbxBuilder::assignNormal(const MeshObject& info, FbxMesh* mesh)
 
 	// The normals in info.normal should be matched with info.position
 	auto& lDirectArray = lLayerElementNormal->GetDirectArray();
-	int   normalCount  = (int)info.normal.size();
+	int   normalCount  = (int)normals.size();
 	lDirectArray.Resize(normalCount);
 	for (int i = 0; i != normalCount; ++i)
 	{
-		auto& n = info.normal[i];
-		lDirectArray.SetAt(i, FbxVector4(n[0], n[1], n[2], n[3]));
+		auto& n = normals[i];
+		lDirectArray.SetAt(i, FbxVector4(n[0], n[1], n[2], 0.0f));
 	}
 
 	// Finally, we set layer 0 of the mesh to the normal layer element.
@@ -376,6 +381,99 @@ std::string FbxBuilder::findTexturePath(const MeshObject& info, const std::strin
 		}
 	}
 	return std::string();
+}
+
+glm::vec3 MultiplyAdd(const glm::vec3& V1, const glm::vec3& V2, const glm::vec3& V3)
+{
+	return glm::vec3(V1.x * V2.x + V3.x,
+					 V1.y * V2.y + V3.y,
+					 V1.z * V2.z + V3.z);
+}
+
+std::vector<glm::vec3> FbxBuilder::ComputeNormalsWeightedByAngle(
+	const std::vector<uint32_t>&  indices,
+	const std::vector<glm::vec3>& positions,
+	bool                          cw)
+{
+	size_t nFaces = indices.size() / 3;
+	size_t nVerts = positions.size();
+
+	std::vector<glm::vec3> vertNormals(nVerts, glm::vec3(0.0));
+
+	for (size_t face = 0; face < nFaces; ++face)
+	{
+		uint32_t i0 = indices[face * 3];
+		uint32_t i1 = indices[face * 3 + 1];
+		uint32_t i2 = indices[face * 3 + 2];
+
+		if (i0 == -1 || i1 == -1 || i2 == -1)
+		{
+			continue;
+		}
+
+		if (i0 >= nVerts || i1 >= nVerts || i2 >= nVerts)
+		{
+			return std::vector<glm::vec3>();
+		}
+
+		const glm::vec3 p0 = positions[i0];
+		const glm::vec3 p1 = positions[i1];
+		const glm::vec3 p2 = positions[i2];
+
+		const glm::vec3 u = p1 - p0;
+		const glm::vec3 v = p2 - p0;
+
+		const glm::vec3 faceNormal = glm::normalize(glm::cross(u, v));
+
+		// Corner 0 -> 1 - 0, 2 - 0
+		const glm::vec3 a   = glm::normalize(u);
+		const glm::vec3 b   = glm::normalize(v);
+		float           dot = glm::dot(a, b);
+		dot                 = glm::clamp(dot, -1.0f, 1.0f);
+		float     angle     = glm::acos(dot);
+		glm::vec3 w0(angle, angle, angle);
+
+		// Corner 1 -> 2 - 1, 0 - 1
+		const glm::vec3 c = glm::normalize(p2 - p1);
+		const glm::vec3 d = glm::normalize(p0 - p1);
+		dot               = glm::dot(c, d);
+		dot               = glm::clamp(dot, -1.0f, 1.0f);
+		angle             = glm::acos(dot);
+		glm::vec3 w1(angle, angle, angle);
+
+		// Corner 2 -> 0 - 2, 1 - 2
+		const glm::vec3 e = glm::normalize(p0 - p2);
+		const glm::vec3 f = glm::normalize(p1 - p2);
+		dot               = glm::dot(e, f);
+		dot               = glm::clamp(dot, -1.0f, 1.0f);
+		angle             = glm::acos(dot);
+		glm::vec3 w2(angle, angle, angle);
+
+		vertNormals[i0] = MultiplyAdd(faceNormal, w0, vertNormals[i0]);
+		vertNormals[i1] = MultiplyAdd(faceNormal, w1, vertNormals[i1]);
+		vertNormals[i2] = MultiplyAdd(faceNormal, w2, vertNormals[i2]);
+	}
+
+	// Store results
+	std::vector<glm::vec3> normals(nVerts);
+	if (cw)
+	{
+		for (size_t vert = 0; vert < nVerts; ++vert)
+		{
+			glm::vec3 n = glm::normalize(vertNormals[vert]);
+			normals[vert] = -n;
+		}
+	}
+	else
+	{
+		for (size_t vert = 0; vert < nVerts; ++vert)
+		{
+			const glm::vec3 n = glm::normalize(vertNormals[vert]);
+			normals[vert]     = n;
+		}
+	}
+
+	return normals;
 }
 
 void FbxBuilder::initializeSdkObjects()

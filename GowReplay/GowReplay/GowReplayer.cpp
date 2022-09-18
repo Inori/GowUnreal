@@ -439,6 +439,19 @@ std::vector<MeshTransform> GowReplayer::getMeshTransforms(const ActionDescriptio
 	return instances;
 }
 
+uint32_t GowReplayer::getVertexCount(const std::vector<uint32_t>& indices, uint32_t baseVertex)
+{
+	uint32_t maxIndex = 0;
+	for (uint32_t idx : indices)
+	{
+		if (idx > maxIndex)
+		{
+			maxIndex = idx;
+		}
+	}
+	return maxIndex + baseVertex + 1;
+}
+
 MeshObject GowReplayer::buildMeshObject(const ActionDescription& act)
 {
 	MeshObject mesh;
@@ -450,9 +463,10 @@ MeshObject GowReplayer::buildMeshObject(const ActionDescription& act)
 		return mesh;
 	}
 
-	mesh.eid     = act.eventId;
-	mesh.name    = fmt::format("EID_{}", act.eventId);
-	mesh.indices = getMeshIndices(meshAttrs.front());
+	mesh.eid          = act.eventId;
+	mesh.name         = fmt::format("EID_{}", act.eventId);
+	mesh.indices      = getMeshIndices(meshAttrs.front());
+	uint32_t vtxCount = getVertexCount(mesh.indices, meshAttrs.front().baseVertex);
 
 	// cache the vertex buffer
 	std::map<ResourceId, bytebuf> vtxCache;
@@ -466,7 +480,8 @@ MeshObject GowReplayer::buildMeshObject(const ActionDescription& act)
 		auto& buffer = vtxCache[attr.vertexResourceId];
 		auto  offset = attr.vertexByteOffset;
 		auto  stride = attr.vertexByteStride;
-		auto  count  = buffer.size() / stride;
+		// auto  count  = buffer.size() / stride;
+		auto count = vtxCount;
 
 		for (size_t i = 0; i != count; ++i)
 		{
