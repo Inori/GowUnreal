@@ -315,6 +315,12 @@ void NewMoveCamera(uint64_t nArg1,
 	static bool bHooked = false;
 	HMODULE     hExe    = GetModuleHandleA(NULL);
 
+	// Note:
+	// It only works in camera mode.
+	// [nCameraInfo + 0x30] have several possible values,
+	// only one of them is EyePos,
+	// I don't know how to filter there addresses in non-camera mode.
+
 	if (g_bUnlimitedCamera)
 	{
 		uint8_t pNops[4] = { 0x90, 0x90, 0x90, 0x90 };
@@ -372,6 +378,8 @@ unsigned __stdcall MoveCameraFunc(void* pArguments)
 {
 	while (true)
 	{
+		float step = 0.5;
+
 		if ((GetAsyncKeyState(VK_NUMPAD0) & 0x8000) != 0)
 		{
 			g_bUnlimitedCamera = !g_bUnlimitedCamera;
@@ -379,32 +387,32 @@ unsigned __stdcall MoveCameraFunc(void* pArguments)
 
 		if ((GetAsyncKeyState(VK_NUMPAD4) & 0x8000) != 0)
 		{
-			g_vEyePos.z += 0.1f;
+			g_vEyePos.z += step;
 		}
 
 		if ((GetAsyncKeyState(VK_NUMPAD6) & 0x8000) != 0)
 		{
-			g_vEyePos.z -= 0.1f;
+			g_vEyePos.z -= step;
 		}
 
 		if ((GetAsyncKeyState(VK_NUMPAD8) & 0x8000) != 0)
 		{
-			g_vEyePos.x -= 0.1f;
+			g_vEyePos.x -= step;
 		}
 
 		if ((GetAsyncKeyState(VK_NUMPAD5) & 0x8000) != 0)
 		{
-			g_vEyePos.x += 0.1f;
+			g_vEyePos.x += step;
 		}
 
 		if ((GetAsyncKeyState(VK_NUMPAD7) & 0x8000) != 0)
 		{
-			g_vEyePos.y -= 0.1f;
+			g_vEyePos.y -= step;
 		}
 
 		if ((GetAsyncKeyState(VK_NUMPAD9) & 0x8000) != 0)
 		{
-			g_vEyePos.y += 0.1f;
+			g_vEyePos.y += step;
 		}
 
 		Sleep(10);
