@@ -114,8 +114,14 @@ void GowSceneBuilder::PlaceObjectInScene(const GowObject& Object)
 		SmActor->Rename(*InstanceName);
 		SmActor->SetActorLabel(InstanceName);
 
-		SmActor->GetStaticMeshComponent()->SetStaticMesh(Object.Mesh);
-		SmActor->GetStaticMeshComponent()->RegisterComponentWithWorld(CurrentWorld);
+		UStaticMeshComponent* Component = SmActor->GetStaticMeshComponent();
+
+		Component->SetStaticMesh(Object.Mesh);
+		if (!Component->IsRegistered())
+		{
+			SmActor->GetStaticMeshComponent()->RegisterComponentWithWorld(CurrentWorld);
+		}
+		
 		CurrentWorld->UpdateWorldComponents(true, true);
 		SmActor->RerunConstructionScripts();
 	}
