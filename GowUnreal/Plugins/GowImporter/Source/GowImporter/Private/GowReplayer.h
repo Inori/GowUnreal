@@ -16,7 +16,7 @@ struct MeshTransform
     glm::vec3 scaling;
 };
 
-struct MeshObject
+struct GowMeshObject
 {
     uint32_t               eid;
     std::string            name;
@@ -70,13 +70,13 @@ private:
 	void iterAction(const ActionDescription& act);
 
 	void                     extractResource(const ActionDescription& act);
-	MeshObject               extractMesh(const ActionDescription& act);
+	GowMeshObject               extractMesh(const ActionDescription& act);
 	std::vector<std::string> extractTexture(const ActionDescription& act);
 
 	std::vector<MeshData>      getMeshAttributes(const ActionDescription& act);
 	std::vector<uint32_t>      getMeshIndices(const MeshData& mesh);
 	std::vector<MeshTransform> getMeshTransforms(const ActionDescription& act);
-	MeshObject                 buildMeshObject(const ActionDescription& act);
+	GowMeshObject                 buildMeshObject(const ActionDescription& act);
 
 	std::optional<ShaderVariable> getShaderConstantVariable(
 		ShaderStage stage, const std::string& name);

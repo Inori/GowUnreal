@@ -8,10 +8,18 @@
 class GowInterface;
 struct GowResourceObject;
 
-struct MeshObject
+struct GowMeshObject
 {
 	UStaticMesh*       Mesh;
 	TArray<FTransform> Instances;
+};
+
+struct GowTextureGroup
+{
+	std::string diffuse;
+	std::string normal;
+	std::string gloss;
+	std::string ao;
 };
 
 UCLASS()
