@@ -1,0 +1,119 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns:atg="http://atg.xbox.com" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{68652706-b700-4472-9af7-a56a482bd896}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{9b7fcbc5-2533-4b88-b75b-d4803e55fa7c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Shaders">
+      <UniqueIdentifier>{eb989628-e889-44bf-837a-05c9f09b258e}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\DirectXTex\DirectXTex.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\DirectXTex\BC.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\DirectXTex\BCDirectCompute.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\DirectXTex\d3dx12.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\DirectXTex\DDS.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\DirectXTex\DirectXTexP.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\DirectXTex\filters.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\DirectXTex\scoped.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\DirectXTex\DirectXTex.inl">
+      <Filter>Header Files</Filter>
+    </None>
+    <None Include="..\DirectXTex\Shaders\CompileShaders.cmd">
+      <Filter>Source Files\Shaders</Filter>
+    </None>
+    <None Include="..\DirectXTex\Shaders\BC6HEncode.hlsl">
+      <Filter>Source Files\Shaders</Filter>
+    </None>
+    <None Include="..\DirectXTex\Shaders\BC7Encode.hlsl">
+      <Filter>Source Files\Shaders</Filter>
+    </None>
+    <None Include="..\DirectXTex\DirectXTexD3D12.cpp">
+      <Filter>Source Files</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\DirectXTex\BC.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\DirectXTex\BC4BC5.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\DirectXTex\BC6HBC7.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\DirectXTex\BCDirectCompute.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\DirectXTex\DirectXTexCompress.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\DirectXTex\DirectXTexCompressGPU.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\DirectXTex\DirectXTexConvert.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\DirectXTex\DirectXTexD3D11.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\DirectXTex\DirectXTexDDS.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\DirectXTex\DirectXTexFlipRotate.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\DirectXTex\DirectXTexHDR.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\DirectXTex\DirectXTexImage.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\DirectXTex\DirectXTexMipmaps.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\DirectXTex\DirectXTexMisc.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\DirectXTex\DirectXTexNormalMaps.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\DirectXTex\DirectXTexPMAlpha.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\DirectXTex\DirectXTexResize.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\DirectXTex\DirectXTexTGA.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\DirectXTex\DirectXTexUtil.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\DirectXTex\DirectXTexWIC.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+</Project>
