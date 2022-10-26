@@ -15,3 +15,8 @@ void UGowTextureRef::SetReference(const FString& RefName)
 	RefTexture = RefName;
 }
 
+const FString& UGowTextureRef::GetReference()
+{
+	return RefTexture;
+}
+

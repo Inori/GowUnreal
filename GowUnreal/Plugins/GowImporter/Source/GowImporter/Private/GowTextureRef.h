@@ -21,6 +21,8 @@ public:
 
 	void SetReference(const FString& RefName);
 
+	const FString& GetReference();
+
 private:
 
 	UPROPERTY()

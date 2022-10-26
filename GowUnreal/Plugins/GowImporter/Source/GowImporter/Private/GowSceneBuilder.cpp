@@ -8,6 +8,7 @@
 #include "Engine/StaticMeshActor.h"
 #include "RawMesh/Public/RawMesh.h"
 #include "StaticMeshAttributes.h"
+#include "GowTextureRef.h"
 
 #include <glm.hpp>
 #include <gtc/constants.hpp>
@@ -60,27 +61,72 @@ void GowSceneBuilder::Build()
 	GLevelEditorModeTools().MapChangeNotify();
 }
 
-GowObject GowSceneBuilder::PopulateGowObject(const TArray<FAssetData>& AssetList)
-{
-	GowObject Object;
 
-	auto FindAsset = [&AssetList](const FString& Name) -> UObject*
+UObject* GowSceneBuilder::FindAsset(const TArray<FAssetData>& AssetList, const FString& Name)
+{
+	for (const auto& Asset : AssetList)
 	{
-		for (const auto& Asset : AssetList)
+		if (Asset.AssetName.ToString().Contains(Name))
 		{
-			if (Asset.AssetName.ToString().Contains(Name))
+			return Asset.GetAsset();
+		}
+	}
+	return nullptr;
+}
+
+FString GowSceneBuilder::ObjectPathToName(const FString& ObjectPath)
+{
+	FString BaseName    = FPaths::GetCleanFilename(ObjectPath);
+	FString PackageName = FPaths::GetPath(ObjectPath);
+	return PackageName + "." + BaseName;
+}
+
+UTexture* GowSceneBuilder::FindTexture(const TArray<FAssetData>& AssetList, const FString& Name)
+{
+	UTexture* Result = nullptr;
+
+	FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
+	IAssetRegistry&       AssetRegistry       = AssetRegistryModule.Get();
+
+	UObject* AssetObject = FindAsset(AssetList, Name);
+	if (AssetObject)
+	{
+		// The asset object can be either a Texture or a TextureRef
+		UTexture*       Texture    = Cast<UTexture>(AssetObject);
+		UGowTextureRef* TextureRef = Cast<UGowTextureRef>(AssetObject);
+		if (Texture)
+		{
+			Result = Texture;
+		}
+		else
+		{
+			const FString& RefName    = TextureRef->GetReference();
+			FString        ObjectName = ObjectPathToName(RefName);
+			FAssetData     Asset      = AssetRegistry.GetAssetByObjectPath(*ObjectName);
+			if (Asset.IsValid())
 			{
-				return Asset.GetAsset();
+				Result = Cast<UTexture>(Asset.GetAsset());
 			}
 		}
-		return nullptr;
-	};
+	}
+	return Result;
+}
 
-	auto MeshAsset = FindAsset(TEXT("SM_"));
+
+GowObject GowSceneBuilder::PopulateGowObject(const TArray<FAssetData>& AssetList)
+{
+	GowObject Object = {};
+
+	auto MeshAsset = FindAsset(AssetList, TEXT("SM_"));
 	Object.Mesh    = Cast<UStaticMesh>(MeshAsset);
 
-	auto InsComponentAsset    = FindAsset("ISC_");
+	auto InsComponentAsset    = FindAsset(AssetList, TEXT("ISC_"));
 	Object.InstancedComponent = Cast<UInstancedStaticMeshComponent>(InsComponentAsset);
+
+	Object.Diffuse = FindTexture(AssetList, TEXT("diffuse"));
+	Object.Normal  = FindTexture(AssetList, TEXT("normal"));
+	Object.Gloss   = FindTexture(AssetList, TEXT("gloss"));
+	Object.Ao      = FindTexture(AssetList, TEXT("ao"));
 
 	return Object;
 }
@@ -206,5 +252,6 @@ FTransform GowSceneBuilder::ConvertTransform(const FTransform& TransRH)
 	FTransform OutTransform(Rotation, Position * UniformScale, Scale * UniformScale);
 	return OutTransform;
 }
+
 
 #pragma optimize("", on)
