@@ -254,8 +254,28 @@ std::vector<std::string> GowReplayer::extractTexture(const ActionDescription& ac
 		}
 	}
 
+	result = removeRepeat(result);
+
 	return result;
 }
+
+std::vector<std::string> GowReplayer::removeRepeat(const std::vector<std::string>& textures)
+{
+	std::vector<std::string> result;
+	std::set<std::string>    texSet;
+
+	for (const auto& tex : textures)
+	{
+		if (texSet.find(tex) == texSet.end())
+		{
+			texSet.insert(tex);
+			result.push_back(tex);
+		}
+	}
+
+	return result;
+}
+
 
 std::vector<MeshData> GowReplayer::getMeshAttributes(const ActionDescription& act)
 {
@@ -824,3 +844,4 @@ bool GowReplayer::isBoneMesh()
 
 	return false;
 }
+

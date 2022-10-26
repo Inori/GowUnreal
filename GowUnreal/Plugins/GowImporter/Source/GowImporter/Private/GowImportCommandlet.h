@@ -8,19 +8,17 @@
 class GowInterface;
 struct GowResourceObject;
 
+namespace DirectX
+{
+	class ScratchImage;
+}  // namespace DirectX
+
 struct GowMeshObject
 {
 	UStaticMesh*       Mesh;
 	TArray<FTransform> Instances;
 };
 
-struct GowTextureGroup
-{
-	std::string diffuse;
-	std::string normal;
-	std::string gloss;
-	std::string ao;
-};
 
 UCLASS()
 class UGowImportCommandlet : public UCommandlet
@@ -39,6 +37,12 @@ private:
 
 	UStaticMesh* CreateMesh(UPackage* Package, const GowResourceObject& obj);
 	void         CreateInstances(UPackage* Package, UStaticMesh* Mesh, const GowResourceObject& obj);
+	void         CreateTextures(UPackage* Package, const GowResourceObject& obj);
+
+	bool DecompressImage(const std::string& Filename, DirectX::ScratchImage& OutImages);
+	void FillTexture(UTexture2D* Texture, const std::string& SrcFilename);
+
+	std::string GetPropertyName(const std::string& Filename);
 
 	TArray<FVector3f> ComputeNormalsWeightedByAngle(
 		const TArray<uint32>&    indices,
@@ -58,5 +62,6 @@ private:
 
 private:
 	std::shared_ptr<GowInterface> m_gowApi;
+	TMap<FString, FString>        m_texMap;
 };
 

@@ -75,6 +75,9 @@ private:
 
 	bool isBoneMesh();
 
+	std::vector<std::string> removeRepeat(
+		const std::vector<std::string>& textures);
+
 private:
 	std::string        m_capFilename;
 	ICaptureFile*      m_cap    = nullptr;

@@ -10,11 +10,24 @@
 #include "Math/Matrix.h"
 #include "Math/TransformNonVectorized.h"
 #include "StaticMeshAttributes.h"
+#include "Misc/FileHelper.h"
+#include "GowTextureRef.h"
 
 #include <glm.hpp>
 #include <gtc/constants.hpp>
 #include <gtc/matrix_access.hpp>
 #include <gtx/euler_angles.hpp>
+
+#define _MANAGED 0
+#define _M_CEE 0
+
+#define WIN32_LEAN_AND_MEAN
+#include <DirectXTex.h>
+#undef WIN32_LEAN_AND_MEAN
+
+#ifdef UpdateResource
+#undef UpdateResource
+#endif
 
 #pragma optimize("", off)
 
@@ -64,6 +77,8 @@ int32 UGowImportCommandlet::Main(const FString& Params)
 
             CreateInstances(Package, Mesh, res);
 
+			CreateTextures(Package, res);
+
             SavePackage(Package);
 		}
 
@@ -92,7 +107,7 @@ void UGowImportCommandlet::SavePackage(UPackage* Package)
 	FString PackageFileName = FPackageName::LongPackageNameToFilename(FolderName, FPackageName::GetAssetPackageExtension());
 
 	SavePackageHelper(Package, PackageFileName);
-	LOG_DEBUG("StaticMesh saved: %s", *PackageFileName);
+	LOG_DEBUG("Package saved: %s", *PackageFileName);
 }
 
 UStaticMesh* UGowImportCommandlet::CreateMesh(UPackage* Package, const GowResourceObject& obj)
@@ -207,6 +222,176 @@ void UGowImportCommandlet::CreateInstances(UPackage* Package, UStaticMesh* Mesh,
 		FTransform ObjectTrasform(modelView);
 		Component->AddInstance(ObjectTrasform, true);
 	}
+}
+
+void UGowImportCommandlet::CreateTextures(UPackage* Package, const GowResourceObject& obj)
+{
+	auto PackagePath = Package->GetName();
+	auto PackageName = FPaths::GetBaseFilename(PackagePath);
+
+	for (const auto& TexFilename : obj.textures)
+	{
+		// Currently only support layer 0 material.
+		if (TexFilename.find("_0_") == std::string::npos)
+		{
+			continue;
+		}
+
+		FString PropName = GetPropertyName(TexFilename).c_str();
+		if (PropName.IsEmpty())
+		{
+			continue;
+		}
+
+		FString Key = FString(TexFilename.c_str());
+		if (m_texMap.Contains(Key))
+		{
+			FString         ObjectName = FString::Printf(TEXT("TR_%s_%s"), *PackageName, *PropName);
+			UGowTextureRef* TextureRef = NewObject<UGowTextureRef>(Package, *ObjectName, RF_Public | RF_Standalone);
+
+			FString ExistingName = m_texMap[Key];
+			TextureRef->SetReference(ExistingName);
+		}
+		else
+		{
+			FString     ObjectName = FString::Printf(TEXT("T_%s_%s"), *PackageName, *PropName);
+			UTexture2D* NewTexture = NewObject<UTexture2D>(Package, *ObjectName, RF_Public | RF_Standalone);
+
+			FillTexture(NewTexture, TexFilename);
+
+			FString TexturePath = PackagePath / ObjectName;
+			m_texMap.Add(Key, TexturePath);
+		}
+	}
+}
+
+bool UGowImportCommandlet::DecompressImage(const std::string& Filename, DirectX::ScratchImage& OutImages)
+{
+	bool ret = false;
+	do
+	{
+		if (Filename.empty())
+		{
+			break;
+		}
+
+		TArray<uint8> DDSData;
+		if (!FFileHelper::LoadFileToArray(DDSData, ANSI_TO_TCHAR(Filename.c_str())))
+		{
+			break;
+		}
+
+		DirectX::TexMetadata  Meta   = {};
+		DirectX::ScratchImage OutDDS = {};
+		if (DirectX::LoadFromDDSMemory(DDSData.GetData(), DDSData.Num(), DirectX::DDS_FLAGS_NONE, &Meta, OutDDS) != S_OK)
+		{
+			break;
+		}
+
+		if (DirectX::Decompress(OutDDS.GetImages(), OutDDS.GetImageCount(), Meta, DXGI_FORMAT_B8G8R8A8_UNORM_SRGB, OutImages) != S_OK)
+		{
+			break;
+		}
+
+		ret = true;
+	}while(false);
+	return ret;
+}
+
+void UGowImportCommandlet::FillTexture(UTexture2D* Texture, const std::string& SrcFilename)
+{
+	do 
+	{
+		if (!Texture)
+		{
+			break;
+		}
+
+		DirectX::ScratchImage BGRAImages = {};
+		if (!DecompressImage(SrcFilename, BGRAImages))
+		{
+			break;
+		}
+
+		const auto& Meta = BGRAImages.GetMetadata();
+
+		Texture->Source.Init(
+			Meta.width,
+			Meta.height,
+			Meta.depth,
+			Meta.mipLevels,
+			TSF_BGRA8);
+
+		if (SrcFilename.find("_normal") != std::string::npos)
+		{
+			Texture->LODGroup            = TEXTUREGROUP_WorldNormalMap;
+			Texture->CompressionSettings = TC_Normalmap;
+			Texture->SRGB                = 0;
+		}
+		else if (SrcFilename.find("_diffuse") == std::string::npos)
+		{
+			Texture->SRGB = 0;
+		}
+
+		for (size_t MipIndex = 0; MipIndex != Meta.mipLevels; ++MipIndex)
+		{
+			uint8* TextureData = Texture->Source.LockMip(MipIndex);
+
+			auto Image = BGRAImages.GetImage(MipIndex, 0, 0);
+
+			uint8* Src         = Image->pixels;
+			uint8* Dst         = TextureData;
+			size_t SrcRowPitch = Image->rowPitch;
+			size_t DstRowPitch = 4 * Image->width;
+
+			if (SrcRowPitch == DstRowPitch)
+			{
+				size_t ImageSize = Image->rowPitch * Image->height;
+				FMemory::Memcpy(Dst, Src, ImageSize);
+			}
+			else
+			{
+				for (size_t row = 0; row != Image->height; ++row)
+				{
+					FMemory::Memcpy(Dst, Src, DstRowPitch);
+
+					Dst += DstRowPitch;
+					Src += SrcRowPitch;
+				}
+			}
+
+			Texture->Source.UnlockMip(MipIndex);
+		}
+
+		Texture->UpdateResource();
+
+	} while (false);
+
+}
+
+std::string UGowImportCommandlet::GetPropertyName(const std::string& Filename)
+{
+	std::string result;
+
+	do 
+	{
+		auto start = Filename.rfind("_0__");
+		if (start == std::string::npos)
+		{
+			break;
+		}
+
+		auto end = Filename.rfind(".");
+		if (end == std::string::npos)
+		{
+			break;
+		}
+
+		auto len = end - start;
+		result   = Filename.substr(start + 4, len - 4);
+	} while (false);
+
+	return result;
 }
 
 static FVector3f MultiplyAdd(const FVector3f& V1, const FVector3f& V2, const FVector3f& V3)
