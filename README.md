@@ -1,9 +1,7 @@
 # GowUnreal
 
-The project is aiming to export resources in God of War 4 at it's right position within a scene
-and import them into UE5.
-
-The exported resources will also be stored in FBX format of Autodesk, so they can be imported into Maya.
+The project is aiming to export resources in God of War 4 at it's right position within a scene and import them into UE5.
+And also implement some great rendering techniques which used in GoW4
 
 ### Feature
 1. The exported resources can be stored in FBX format of Autodesk, so they can be imported into Maya.
@@ -16,6 +14,8 @@ The exported resources will also be stored in FBX format of Autodesk, so they ca
 ### Progress
 In Game:  
 ![Hill1](https://github.com/Inori/GowUnreal/blob/master/Images/hill1_game.jpg?raw=true)  
+Unlimited camera distance:  
+![Hill1](https://github.com/Inori/GowUnreal/blob/master/Images/ue2.jpg?raw=true)  
 
 In Unreal:  
 ![Hill1](https://github.com/Inori/GowUnreal/blob/master/Images/ue1.jpg?raw=true)  
