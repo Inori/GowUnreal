@@ -194,12 +194,12 @@ GowResourceObject GowReplayer::extractMesh(const ActionDescription& act)
 	return buildMeshObject(act);
 }
 
-std::vector<std::string> GowReplayer::extractTexture(const ActionDescription& act)
+std::vector<GowTextureFileMapping> GowReplayer::extractTexture(const ActionDescription& act)
 {
 	LOG_TRACE("Save texture from event {}", act.eventId);
 
-	std::vector<std::string> result;
-	fs::path                 outDir = fs::path(m_capFilename).parent_path();
+	std::vector<GowTextureFileMapping> result;
+	fs::path                           outDir = fs::path(m_capFilename).parent_path();
 
 	auto texList = getShaderResourceTextures(ShaderStage::Pixel);
 
@@ -240,7 +240,10 @@ std::vector<std::string> GowReplayer::extractTexture(const ActionDescription& ac
 				LOG_TRACE("Use saved texture {} for event {}", filename.string(), act.eventId);
 			}
 
-			result.push_back(filename.string());
+			GowTextureFileMapping mapping;
+			mapping.slotName = tex.name;
+			mapping.fileName = filename.string();
+			result.push_back(mapping);
 
 			m_textureCache[tex.id] = filename.string();
 		}
@@ -250,7 +253,10 @@ std::vector<std::string> GowReplayer::extractTexture(const ActionDescription& ac
 			// the texture is already saved,
 			// we return the saved file path
 			LOG_TRACE("Use saved texture {} for event {}", filename, act.eventId);
-			result.push_back(filename);
+			GowTextureFileMapping mapping;
+			mapping.slotName = tex.name;
+			mapping.fileName = filename;
+			result.push_back(mapping);
 		}
 	}
 
@@ -259,16 +265,16 @@ std::vector<std::string> GowReplayer::extractTexture(const ActionDescription& ac
 	return result;
 }
 
-std::vector<std::string> GowReplayer::removeRepeat(const std::vector<std::string>& textures)
+std::vector<GowTextureFileMapping> GowReplayer::removeRepeat(const std::vector<GowTextureFileMapping>& textures)
 {
-	std::vector<std::string> result;
-	std::set<std::string>    texSet;
+	std::vector<GowTextureFileMapping> result;
+	std::set<std::string>              texSet;
 
 	for (const auto& tex : textures)
 	{
-		if (texSet.find(tex) == texSet.end())
+		if (texSet.find(tex.slotName) == texSet.end())
 		{
-			texSet.insert(tex);
+			texSet.insert(tex.slotName);
 			result.push_back(tex);
 		}
 	}

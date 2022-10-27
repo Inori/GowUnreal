@@ -9,6 +9,11 @@
 #include "RawMesh/Public/RawMesh.h"
 #include "StaticMeshAttributes.h"
 #include "GowTextureRef.h"
+#include "IContentBrowserSingleton.h"
+#include "ContentBrowserModule.h"
+#include "Factories/MaterialInstanceConstantFactoryNew.h"
+#include "Materials/MaterialInstanceConstant.h"
+#include "AssetToolsModule.h"
 
 #include <glm.hpp>
 #include <gtc/constants.hpp>
@@ -28,6 +33,9 @@ GowSceneBuilder::~GowSceneBuilder()
 
 void GowSceneBuilder::Build()
 {
+	InitMaterialTemplate();
+	ObjectsToSync.Empty();
+
 	FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
 	TArray<FAssetData>    AssetData;
 	AssetRegistryModule.Get().GetAssetsByPath("/Game/Gow/", AssetData);
@@ -57,6 +65,8 @@ void GowSceneBuilder::Build()
 		PlaceObjectInScene(Object);
 	}
 
+	FContentBrowserModule& ContentBrowserModule = FModuleManager::LoadModuleChecked<FContentBrowserModule>("ContentBrowser");
+	ContentBrowserModule.Get().SyncBrowserToAssets(ObjectsToSync, true);
 	GEditor->EditorUpdateComponents();
 	GLevelEditorModeTools().MapChangeNotify();
 }
@@ -79,6 +89,19 @@ FString GowSceneBuilder::ObjectPathToName(const FString& ObjectPath)
 	FString BaseName    = FPaths::GetCleanFilename(ObjectPath);
 	FString PackageName = FPaths::GetPath(ObjectPath);
 	return PackageName + "." + BaseName;
+}
+
+void GowSceneBuilder::InitMaterialTemplate()
+{
+	FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
+	IAssetRegistry&       AssetRegistry       = AssetRegistryModule.Get();
+
+	FString    TemplatePath = TEXT("/Game/GowMaterial/M_GowTemplate.M_GowTemplate");
+	FAssetData Asset = AssetRegistry.GetAssetByObjectPath(*TemplatePath);
+	if (Asset.IsValid())
+	{
+		GowMaterialTemplate = Cast<UMaterial>(Asset.GetAsset());
+	}
 }
 
 UTexture* GowSceneBuilder::FindTexture(const TArray<FAssetData>& AssetList, const FString& Name)
@@ -140,6 +163,8 @@ void GowSceneBuilder::PlaceObjectInScene(const GowObject& Object)
 	ULevel* CurrentLevel    = CurrentWorld->GetCurrentLevel();
 	UClass* StaticMeshClass = AStaticMeshActor::StaticClass();
 
+	UMaterialInterface* Material = CreateOrGetMaterialInstance(Object);
+
 	auto InstancedComponent = Object.InstancedComponent;
 	auto InstanceCount      = InstancedComponent->GetInstanceCount();
 	for (uint32_t Index = 0; Index != InstanceCount; ++Index)
@@ -168,11 +193,71 @@ void GowSceneBuilder::PlaceObjectInScene(const GowObject& Object)
 			SmActor->GetStaticMeshComponent()->RegisterComponentWithWorld(CurrentWorld);
 		}
 		
+		if (Material)
+		{
+			Component->SetMaterial(0, Material);
+		}
+		
 		CurrentWorld->UpdateWorldComponents(true, true);
 		SmActor->RerunConstructionScripts();
 	}
 
 	LOG_DEBUG("Place Mesh %s", *MeshName);
+}
+
+UMaterialInterface* GowSceneBuilder::CreateOrGetMaterialInstance(const GowObject& Object)
+{
+	UMaterialInterface* Result = nullptr;
+	do 
+	{
+		if (!GowMaterialTemplate)
+		{
+			break;
+		}
+
+		if (!Object.Diffuse)
+		{
+			break;
+		}
+
+		FString Key = FPaths::GetBaseFilename(Object.Diffuse->GetPackage()->GetName());
+		if (MaterialMap.Contains(Key))
+		{
+			Result = MaterialMap[Key];
+		}
+		else
+		{
+			UMaterialInstanceConstantFactoryNew* Factory = NewObject<UMaterialInstanceConstantFactoryNew>();
+			Factory->InitialParent                       = GowMaterialTemplate;
+
+			FString PackagePath  = FPackageName::GetLongPackagePath(GowMaterialTemplate->GetPackage()->GetName());
+			FString ID           = FPaths::GetBaseFilename(Object.Mesh->GetPackage()->GetName());
+			FString MaterialName = FString::Printf(TEXT("MI_%s"), *ID);
+
+			FAssetToolsModule& AssetToolsModule = FModuleManager::GetModuleChecked<FAssetToolsModule>("AssetTools");
+			UObject*           NewAsset         = AssetToolsModule.Get().CreateAsset(MaterialName, PackagePath, UMaterialInstanceConstant::StaticClass(), Factory);
+
+			if (NewAsset)
+			{
+				ObjectsToSync.Add(NewAsset);
+				Result = Cast<UMaterialInterface>(NewAsset);
+				MaterialMap.Add(Key, Result);
+			}
+
+			UMaterialInstanceConstant* MIC = Cast<UMaterialInstanceConstant>(NewAsset);
+			if (MIC)
+			{
+				MIC->SetTextureParameterValueEditorOnly(FMaterialParameterInfo("Diffuse"), Object.Diffuse);
+				MIC->SetTextureParameterValueEditorOnly(FMaterialParameterInfo("Normal"), Object.Normal);
+				MIC->SetTextureParameterValueEditorOnly(FMaterialParameterInfo("Gloss"), Object.Gloss);
+				MIC->SetTextureParameterValueEditorOnly(FMaterialParameterInfo("Ao"), Object.Ao);
+
+				MIC->PostEditChange();
+			}
+		}
+
+	} while (false);
+	return Result;
 }
 
 FTransform GowSceneBuilder::ConvertTransform(const FTransform& TransRH)

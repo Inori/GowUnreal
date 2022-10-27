@@ -16,6 +16,12 @@ struct MeshTransform
     glm::vec3 scaling;
 };
 
+struct GowTextureFileMapping
+{
+	std::string slotName;
+	std::string fileName;
+};
+
 struct GowResourceObject
 {
     uint32_t               eid;
@@ -28,8 +34,8 @@ struct GowResourceObject
     std::vector<glm::vec4> tangent;
     std::vector<glm::vec4> normal;
 
-    std::vector<MeshTransform> instances;
-    std::vector<std::string>   textures;
+    std::vector<MeshTransform>         instances;
+	std::vector<GowTextureFileMapping> textures;
 
     bool isValid();
 };

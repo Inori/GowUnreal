@@ -229,21 +229,22 @@ void UGowImportCommandlet::CreateTextures(UPackage* Package, const GowResourceOb
 	auto PackagePath = Package->GetName();
 	auto PackageName = FPaths::GetBaseFilename(PackagePath);
 
-	for (const auto& TexFilename : obj.textures)
+	for (const auto& TexFileMapping : obj.textures)
 	{
+		const std::string& slotName = TexFileMapping.slotName;
 		// Currently only support layer 0 material.
-		if (TexFilename.find("_0_") == std::string::npos)
+		if (slotName.find("_0_") == std::string::npos)
 		{
 			continue;
 		}
 
-		FString PropName = GetPropertyName(TexFilename).c_str();
+		FString PropName = GetPropertyName(slotName).c_str();
 		if (PropName.IsEmpty())
 		{
 			continue;
 		}
 
-		FString Key = FString(TexFilename.c_str());
+		FString Key = FString(TexFileMapping.fileName.c_str());
 		if (m_texMap.Contains(Key))
 		{
 			FString         ObjectName = FString::Printf(TEXT("TR_%s_%s"), *PackageName, *PropName);
@@ -257,7 +258,7 @@ void UGowImportCommandlet::CreateTextures(UPackage* Package, const GowResourceOb
 			FString     ObjectName = FString::Printf(TEXT("T_%s_%s"), *PackageName, *PropName);
 			UTexture2D* NewTexture = NewObject<UTexture2D>(Package, *ObjectName, RF_Public | RF_Standalone);
 
-			FillTexture(NewTexture, TexFilename);
+			FillTexture(NewTexture, TexFileMapping.fileName);
 
 			FString TexturePath = PackagePath / ObjectName;
 			m_texMap.Add(Key, TexturePath);
@@ -369,26 +370,19 @@ void UGowImportCommandlet::FillTexture(UTexture2D* Texture, const std::string& S
 
 }
 
-std::string UGowImportCommandlet::GetPropertyName(const std::string& Filename)
+std::string UGowImportCommandlet::GetPropertyName(const std::string& SlotName)
 {
 	std::string result;
 
 	do 
 	{
-		auto start = Filename.rfind("_0__");
+		auto start = SlotName.rfind("_0__");
 		if (start == std::string::npos)
 		{
 			break;
 		}
 
-		auto end = Filename.rfind(".");
-		if (end == std::string::npos)
-		{
-			break;
-		}
-
-		auto len = end - start;
-		result   = Filename.substr(start + 4, len - 4);
+		result = SlotName.substr(start + 4);
 	} while (false);
 
 	return result;

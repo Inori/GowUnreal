@@ -42,7 +42,7 @@ private:
 	bool DecompressImage(const std::string& Filename, DirectX::ScratchImage& OutImages);
 	void FillTexture(UTexture2D* Texture, const std::string& SrcFilename);
 
-	std::string GetPropertyName(const std::string& Filename);
+	std::string GetPropertyName(const std::string& SlotName);
 
 	TArray<FVector3f> ComputeNormalsWeightedByAngle(
 		const TArray<uint32>&    indices,

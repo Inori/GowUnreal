@@ -47,9 +47,10 @@ private:
 	void processActions();
 	void iterAction(const ActionDescription& act);
 
-	void                     extractResource(const ActionDescription& act);
-	GowResourceObject        extractMesh(const ActionDescription& act);
-	std::vector<std::string> extractTexture(const ActionDescription& act);
+	void              extractResource(const ActionDescription& act);
+	GowResourceObject extractMesh(const ActionDescription& act);
+	std::vector<GowTextureFileMapping>
+	extractTexture(const ActionDescription& act);
 
 	std::vector<MeshData>      getMeshAttributes(const ActionDescription& act);
 	std::vector<uint32_t>      getMeshIndices(const MeshData& mesh);
@@ -75,8 +76,8 @@ private:
 
 	bool isBoneMesh();
 
-	std::vector<std::string> removeRepeat(
-		const std::vector<std::string>& textures);
+	std::vector<GowTextureFileMapping> removeRepeat(
+		const std::vector<GowTextureFileMapping>& textures);
 
 private:
 	std::string        m_capFilename;

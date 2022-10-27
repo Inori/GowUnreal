@@ -44,6 +44,7 @@ public class GowImporter : ModuleRules
 				"RawMesh",
 				"UnrealEd",
 				"ToolMenus",
+                "AssetTools",
                 "InputCore",
                 "EditorFramework",
 				"StaticMeshDescription",
