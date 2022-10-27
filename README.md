@@ -12,6 +12,7 @@ In Game:
 
 In Unreal:  
 ![Hill1](https://github.com/Inori/GowUnreal/blob/master/Images/ue1.jpg?raw=true)  
+![Hill1](https://github.com/Inori/GowUnreal/blob/master/Images/ue2.jpg?raw=true)  
 
 In Maya:  
 ![Hill2](https://github.com/Inori/GowUnreal/blob/master/Images/hill_maya2.jpg?raw=true)  
