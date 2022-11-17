@@ -58,6 +58,8 @@ typedef HANDLE(WINAPI* PFUNC_CreateFileW)(
 
 PFUNC_CreateFileW g_OldCreateFileW = CreateFileW;
 
+HANDLE g_hWadFile = NULL;
+
 HANDLE WINAPI NewCreateFileW(
 	LPCWSTR               lpFileName,
 	DWORD                 dwDesiredAccess,
@@ -77,6 +79,8 @@ HANDLE WINAPI NewCreateFileW(
 					 dwFlagsAndAttributes,
 					 hTemplateFile);
 
+	auto logger = spdlog::get("gow-logger");
+
 	do 
 	{
 		if (handle == INVALID_HANDLE_VALUE)
@@ -92,20 +96,82 @@ HANDLE WINAPI NewCreateFileW(
 
 		if (s_nameSet.find(fileName) == s_nameSet.end())
 		{
-			auto logger = spdlog::get("gow-logger");
-			if (logger)
-			{
-				logger->info(L"{}", fileName);
-				logger->flush();
-			}
+			logger->info(L"{}", fileName);
+			logger->flush();
 
 			s_nameSet.insert(fileName);
 		}
+
+		if (fileName.find(L"R_HeroA00.wad") != std::wstring::npos)
+		{
+			g_hWadFile = handle;
+			logger->info("wad handle: {}", (void*)g_hWadFile);
+		}
+
 
 	} while (false);
 
 	return handle;
 }
+
+
+typedef BOOL (WINAPI* PFUNC_ReadFile)(
+	HANDLE       hFile,
+	LPVOID       lpBuffer,
+	DWORD        nNumberOfBytesToRead,
+	LPDWORD      lpNumberOfBytesRead,
+	LPOVERLAPPED lpOverlapped);
+
+PFUNC_ReadFile g_OldReadFile = ReadFile;
+
+BOOL WINAPI NewReadFile(
+	HANDLE       hFile,
+	LPVOID       lpBuffer,
+	DWORD        nNumberOfBytesToRead,
+	LPDWORD      lpNumberOfBytesRead,
+	LPOVERLAPPED lpOverlapped)
+{
+	BOOL bRet = g_OldReadFile(hFile, lpBuffer, nNumberOfBytesToRead, lpNumberOfBytesRead, lpOverlapped);
+
+	const char* szTag = "ANM_fx_kratos_breath";
+	DWORD       dwTagLen = strlen(szTag);
+
+	auto logger = spdlog::get("gow-logger");
+
+	do 
+	{
+		if (hFile != g_hWadFile || !lpBuffer || !lpNumberOfBytesRead)
+		{
+			break;
+		}
+
+		DWORD dwBytesRead = *lpNumberOfBytesRead;
+
+		if (dwBytesRead < dwTagLen)
+		{
+			break;
+		}
+
+		BYTE* pMem = (BYTE*)lpBuffer;
+		for (DWORD i = 0; i < dwBytesRead - dwTagLen; ++i)
+		{
+			if (!memcmp(&pMem[i], szTag, dwTagLen))
+			{
+				//char szMsg[64] = {};
+				//sprintf_s(szMsg, "anm addr: %p", &pMem[i]);
+				//MessageBoxA(nullptr, szMsg, "Debug", MB_OK);
+				logger->info("anim addr: {}", (void*)&pMem[i]);
+			}
+		}
+
+
+	} while (false);
+
+
+	return bRet;
+}
+
+
 
 ID3D11Buffer* g_pViewDataBuffer = nullptr;
 
@@ -197,6 +263,101 @@ void WINAPI NewUpdateSubresource(
 						   SrcRowPitch,
 						   SrcDepthPitch);
 }
+
+typedef HRESULT (WINAPI* PFUNC_Map)(
+	ID3D11DeviceContext*      pCtx,
+	ID3D11Resource*           pResource,
+	UINT                      Subresource,
+	D3D11_MAP                 MapType,
+	UINT                      MapFlags,
+	D3D11_MAPPED_SUBRESOURCE* pMappedResource);
+
+PFUNC_Map g_OldMap = nullptr;
+void*     g_pBoneBuffer = nullptr;
+void*     g_pBoneMemory = nullptr;
+
+HRESULT WINAPI NewMap(
+	ID3D11DeviceContext*      pCtx,
+	ID3D11Resource*           pResource,
+	UINT                      Subresource,
+	D3D11_MAP                 MapType,
+	UINT                      MapFlags,
+	D3D11_MAPPED_SUBRESOURCE* pMappedResource)
+{
+	HRESULT hRet = g_OldMap(pCtx, pResource, Subresource, MapType, MapFlags, pMappedResource);
+
+	do 
+	{
+		if (!pResource)
+		{
+			break;
+		}
+
+		D3D11_RESOURCE_DIMENSION dim = {};
+		pResource->GetType(&dim);
+
+		if (dim != D3D11_RESOURCE_DIMENSION_BUFFER)
+		{
+			break;
+		}
+
+		ID3D11Buffer* pBuffer = (ID3D11Buffer*)pResource;
+
+		D3D11_BUFFER_DESC desc = {};
+		pBuffer->GetDesc(&desc);
+
+		// this buffer is for bone matrix array
+		if (desc.ByteWidth != 52752 || desc.CPUAccessFlags != D3D11_CPU_ACCESS_WRITE)
+		{
+			break;
+		}
+
+		g_pBoneBuffer = pBuffer;
+		g_pBoneMemory = pMappedResource->pData;
+		
+		if (IsDebuggerPresent())
+		{
+			char pMsg[64] = { 0 };
+			sprintf_s(pMsg, "map addr %p", g_pBoneMemory);
+			//MessageBoxA(0, pMsg, "Debug", MB_OK);
+		}
+
+	} while (false);
+
+	return hRet;
+}
+
+
+typedef void (WINAPI* PFUNC_Unmap)(
+	ID3D11DeviceContext*      pCtx,
+	ID3D11Resource*           pResource,
+	UINT                      Subresource);
+
+PFUNC_Unmap g_OldUnmap = nullptr;
+
+void WINAPI NewUnmap(
+	ID3D11DeviceContext*      pCtx,
+	ID3D11Resource*           pResource,
+	UINT                      Subresource)
+{
+	if (pResource == g_pBoneBuffer && IsDebuggerPresent())
+	{
+		memset(g_pBoneMemory, 0, 52752);
+	}
+
+	g_OldUnmap(pCtx, pResource, Subresource);
+
+	if (pResource == g_pBoneBuffer)
+	{
+		if (IsDebuggerPresent())
+		{
+			char pMsg[64] = { 0 };
+			sprintf_s(pMsg, "unmap buffer %p", pResource);
+			//MessageBoxA(0, pMsg, "Debug", MB_OK);
+		}
+	}
+}
+
 
 bool IsValidPosition(const glm::vec4& pos)
 {
@@ -419,12 +580,66 @@ unsigned __stdcall MoveCameraFunc(void* pArguments)
 	}
 }
 
+struct ListEntry
+{
+	void* pMemory;
+	uint32_t nSize;
+};
+
+unsigned __stdcall ParseGlobalList(void* pArguments)
+{
+	auto logger = spdlog::get("gow-logger");
+
+	//while (!IsDebuggerPresent())
+	//{
+	//	Sleep(1);
+	//}
+
+	HMODULE     hMod        = GetModuleHandleA(NULL);
+	ListEntry** pList       = (ListEntry**)((uint8_t*)hMod + 0x12DB8D0);
+	uint32_t    nEntryCount = *(uint32_t*)((uint8_t*)hMod + 0x12DB8B8);
+
+	while (!nEntryCount)
+	{
+		nEntryCount = *(uint32_t*)((uint8_t*)hMod + 0x12DB8B8);
+		Sleep(1);
+	}
+
+	while (true)
+	{
+		ListEntry** pList       = (ListEntry**)((uint8_t*)hMod + 0x12DB8D0);
+		uint32_t    nEntryCount = *(uint32_t*)((uint8_t*)hMod + 0x12DB8B8);
+
+		logger->info("pList: {}", (void*)pList);
+		logger->info("nEntryCount: {}", nEntryCount);
+
+		for (uint32_t i = 0; i != nEntryCount; ++i)
+		{
+			ListEntry* pEntry = pList[i];
+
+			if (pEntry->nSize != 0xCE10)
+			{
+				continue;
+			}
+
+			logger->info("memory: {}", (void*)pEntry->pMemory);
+			logger->info("size: {}", (void*)pEntry->nSize);
+		}
+
+		logger->info("=================");
+
+		Sleep(2000);
+	}
+
+	return 0;
+}
+
 void InitLogger()
 {
 	auto msvc_sink = std::make_shared<spdlog::sinks::msvc_sink_mt>();
 	auto file_sink = std::make_shared<spdlog::sinks::basic_file_sink_mt>("gow-log.txt", true);
-	// spdlog::sinks_init_list sink_list = { file_sink, msvc_sink };
-	spdlog::sinks_init_list sink_list = { msvc_sink };
+	spdlog::sinks_init_list sink_list = { file_sink, msvc_sink };
+	// spdlog::sinks_init_list sink_list = { msvc_sink };
 
 	auto logger = std::make_shared<spdlog::logger>("gow-logger", sink_list.begin(), sink_list.end());
 	spdlog::set_default_logger(logger);
@@ -438,21 +653,30 @@ void SetupHook()
 
 	g_OldVSSetConstantBuffers = (PFUNC_VSSetConstantBuffers)((BYTE*)hD3D11 + 0x105160);
 	g_OldUpdateSubresource    = (PFUNC_UpdateSubresource)((BYTE*)hD3D11 + 0x105970);
+
+	g_OldMap   = (PFUNC_Map)((BYTE*)hD3D11 + 0x105640);
+	g_OldUnmap = (PFUNC_Unmap)((BYTE*)hD3D11 + 0x105870);
+
 	g_OldMoveCamera           = (PFUNC_MoveCamera)((BYTE*)GetModuleHandleA(NULL) + 0x4E7A40);
 
 	DetourTransactionBegin();
 	DetourUpdateThread(GetCurrentThread());
 
-	//DetourAttach((void**)&g_OldCreateFileW, NewCreateFileW);
+	DetourAttach((void**)&g_OldCreateFileW, NewCreateFileW);
+	DetourAttach((void**)&g_OldReadFile, NewReadFile);
 	//DetourAttach((void**)&g_OldVSSetConstantBuffers, NewVSSetConstantBuffers);
 	//DetourAttach((void**)&g_OldUpdateSubresource, NewUpdateSubresource);
-	DetourAttach((void**)&g_OldMoveCamera, NewMoveCamera);
+	//DetourAttach((void**)&g_OldMoveCamera, NewMoveCamera);
+	//DetourAttach((void**)&g_OldMap, NewMap);
+	//DetourAttach((void**)&g_OldUnmap, NewUnmap);
 
 	DetourTransactionCommit();
 
-	unsigned threadID;
-	_beginthreadex(NULL, 0, &MoveCameraFunc, NULL, 0, &threadID);
+	//unsigned threadID;
+	//_beginthreadex(NULL, 0, &MoveCameraFunc, NULL, 0, &threadID);
 
+	unsigned threadID;
+	//_beginthreadex(NULL, 0, &ParseGlobalList, NULL, 0, &threadID);
 }
 
 void InitProc()

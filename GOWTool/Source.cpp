@@ -11,6 +11,8 @@
 #include "Gnf.h"
 #include "converter.h"
 
+#include <unordered_set>
+
 bool ImportAllGnf(const std::filesystem::path& gnfSrcDir, vector<Texpack*>& texpacks)
 {
     if (gnfSrcDir.empty() || !gnfSrcDir.is_absolute() || !std::filesystem::exists(gnfSrcDir) || !std::filesystem::is_directory(gnfSrcDir))
@@ -490,8 +492,47 @@ std::vector<std::string> ParseListFile(const std::string& listfile)
     return result;
 }
 
+void ParseWad()
+{
+    std::filesystem::recursive_directory_iterator dir("F:\\Game\\GodOfWar\\exec\\wad\\pc_le");
+    std::unordered_set<WadFile::FileType> typeSet;
+    std::ofstream fout("F:\\Game\\GodOfWar\\anime_list.txt");
+
+    for (const std::filesystem::directory_entry& entry : dir)
+    {
+        if (entry.path().extension().string() == ".wad")
+        {
+            cout << "wad " << entry.path() << "\n";
+            fout << "wad " << entry.path() << "\n";
+            WadFile wad;
+            wad.Read(entry.path());
+
+            for (const auto& item : wad._FileEntries)
+            {
+                //if (typeSet.find(item.type) != typeSet.end())
+                //{
+                //    continue;
+                //}
+
+                if (item.type == WadFile::FileType::Anime || item.name.find("ANM_") != std::string::npos)
+                {
+                    typeSet.insert(item.type);
+                    fout << "name " << item.name << "\n";
+                    fout << "type " << std::hex << (int)item.type << "\n";
+                    fout << "size " << std::hex << (int)item.size << "\n";
+                    fout << "offset " << std::hex << (int)item.offset << "\n";
+                    fout << "----------------" << "\n";
+                }
+            }
+        }
+    }
+}
+
 int main(int argc, char* argv[])
 {
+    ParseWad();
+    return 0;
+
     if (argc < 2)
     {
         Utils::Logger::Error("Required argument was not provided.\n");
