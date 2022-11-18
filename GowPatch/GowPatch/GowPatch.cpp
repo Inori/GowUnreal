@@ -634,6 +634,14 @@ unsigned __stdcall ParseGlobalList(void* pArguments)
 	return 0;
 }
 
+typedef void (*PFUNC_ParseAnime)();
+
+void* ParseAnime()
+{
+
+}
+
+
 void InitLogger()
 {
 	auto msvc_sink = std::make_shared<spdlog::sinks::msvc_sink_mt>();
