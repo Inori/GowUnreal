@@ -1064,6 +1064,11 @@ template<class T> inline bool FbxTypeCopy(T& pDst, const void* pSrc, EFbxType pS
 			FBX_ASSERT_NOW("Trying to set value on a void Reference type" );
 			break;
 
+		case eFbxUndefined:
+			// can't know for sure what to copy if the src is of Undefined type
+			// but we don't need to raise an exception for this. Just do nothing!
+			break;
+
 		default:
 			FBX_ASSERT_NOW("Trying to assign an unknown type" );
 			break;
@@ -1103,6 +1108,12 @@ template<class T> inline bool FbxTypeCopy(void* pDst, EFbxType pDstType, const T
 			FBX_ASSERT_NOW("Trying to set value on a void Reference type" );
 			break;
 
+		case eFbxUndefined:
+			// we should never get here, but if we do, let's raise
+			// a meaningful assert
+			FBX_ASSERT_NOW("Trying to set value on an Undefined type");
+			break;
+
 		default:
 			FBX_ASSERT_NOW("Trying to assign an unknown type" );
 			break;
@@ -1140,6 +1151,11 @@ inline bool FbxTypeCopy(void* pDst, EFbxType pDstType, const void* pSrc, EFbxTyp
 
 		case eFbxReference:
 			FBX_ASSERT_NOW("Trying to set value on a void Reference type" );
+			break;
+
+		case eFbxUndefined:
+			// can't know for sure what to copy if the src is of Undefined type
+			// but we don't need to raise an exception for this. Just do nothing!
 			break;
 
 		default:

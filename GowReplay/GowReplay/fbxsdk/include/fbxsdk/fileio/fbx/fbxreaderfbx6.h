@@ -1090,8 +1090,8 @@ private:
     FbxArray<FbxTakeInfo *> mTakeInfo;
     FbxDocumentInfo*        mSceneInfo;
     FbxAnimLayer*           mAnimLayer;
-	FbxMultiMap					mNickToKFCurveNodeTimeWarpsSet;
-	FbxMultiMap*					mNickToAnimCurveTimeWarpsSet;
+	FbxMultiMap				mNickToKFCurveNodeTimeWarpsSet;
+	FbxMultiMap*			mNickToAnimCurveTimeWarpsSet;
 
     Fbx6ClassTemplateMap    mClassTemplateMap;
     FbxProgress*            mProgress;
@@ -1099,6 +1099,40 @@ private:
 
 	bool                    mValidateData;
 	FbxSceneCheckUtility*   mCheckUtility;
+
+    // structure used to cache the IOS_REF.GetBool(....) for when we have
+    // calls of the GetBool() function inside loops that would get executed
+    // often. This would speed things a little bit!
+    struct CachedIOS_REF
+    {
+        bool mImportAnimation;
+        bool mImportAudio;
+        bool mImportShape;
+        bool mImportNormal;
+        bool mImportBinormal;
+        bool mImportTangent;
+        bool mImportVertexColor;
+        bool mImportPolyGroup;
+        bool mImportSmoothing;
+        bool mImportUserData;
+        bool mImportVisibility;
+        bool mImportEdgeCrease;
+        bool mImportVertexCrease;
+        bool mImportHole;
+        bool mImportCalcLegacyShapeNormal;
+        bool mImportLinks;
+        bool mImportConstraint;
+        bool mExtractEmbedded;
+    };
+    CachedIOS_REF mDocFlags;
+
+    inline void TriggerProgress(const char* label)
+    {
+        if (mProgress && !mProgressPause)
+        {
+            mProgress->Update(1.0f, label);
+        }
+    }
 };
 
 #include <fbxsdk/fbxsdk_nsend.h>

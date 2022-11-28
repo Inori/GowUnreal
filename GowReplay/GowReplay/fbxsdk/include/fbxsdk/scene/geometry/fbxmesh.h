@@ -16,6 +16,7 @@
 #include <fbxsdk/fbxsdk_def.h>
 
 #include <fbxsdk/core/base/fbxarray.h>
+#include <fbxsdk/core/base/fbxset.h>
 #include <fbxsdk/scene/geometry/fbxgeometry.h>
 
 #include <fbxsdk/fbxsdk_nsbegin.h>
@@ -762,28 +763,27 @@ public:
         int GetComponentCount() { return mOffsets.GetCount() - 1; }
     };
     void ComputeComponentMaps(ComponentMap& pEdgeToPolyMap, ComponentMap& pPolyToEdgeMap);
-	
-	// Internal structure used to keep the mapping information between the control points and the
-	// vertices referencing them
-	class FBXSDK_DLL ControlPointToVerticesMap
-	{
-	public:
-		ControlPointToVerticesMap();
-		~ControlPointToVerticesMap();
-		bool Valid();		
 
-		void Fill(FbxMesh* pMesh);
+    // Internal structure used to keep the mapping information between the control points and the
+    // vertices referencing them
+    class FBXSDK_DLL ControlPointToVerticesMap
+    {
+    public:
+        bool Valid();
 
-		int  GetCount();
-		bool Init(int pNbEntries);
-		void Clear();
+        void FillWithControlPointInfo(FbxMesh* pMesh);
+        bool FillWithAdjacencyInfo(FbxMesh* pMesh, int pNbControlPoints);
 
-		FbxArray<int>* GetVerticesArray(int pControlPoint);
-		FbxArray<int>* operator[](int pControlPoint);
+        int  GetCount();
+        void Clear();
 
-	private:
-		FbxArray< FbxArray<int>* > mMap;
-	};
+        int GetCount(int pControlPoint) const;
+        int GetVertex(int pControlPoint, int pVertex) const;
+
+    private:
+        FbxArray<int> mStartIndices;
+        FbxArray<int> mVertexIndices;
+    };
 	void ComputeControlPointToVerticesMap(ControlPointToVerticesMap& pMap);
 
 	// this function will compare the vertex normals with the corresponding ones in pMesh and 
@@ -817,10 +817,20 @@ protected:
 
 	struct V2PVMap
 	{
+		struct EdgeCompare
+		{
+			inline int operator()(FbxPair<int, int> const& pKeyA, FbxPair<int, int> const& pKeyB) const
+			{
+				int lResult = pKeyA.mSecond - pKeyB.mSecond;
+				if (lResult == 0) return pKeyA.mFirst - pKeyB.mFirst;
+				else return lResult;
+			}
+		};
+
 		PolygonIndexDef* mV2PV;
 		int* mV2PVOffset;
 		int* mV2PVCount;
-		FbxArray<FbxSet<int>* > mPVEdge;
+		FbxSet<FbxPair<int, int>, EdgeCompare, FbxHungryAllocator> mPVEdges;
 		bool mValid;
 
 		//Used for fast search in GetMeshEdgeIndexForPolygon this array does not follow the same allocation as the above ones because

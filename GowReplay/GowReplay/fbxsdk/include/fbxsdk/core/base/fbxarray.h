@@ -103,10 +103,26 @@ public:
 
     /** Append an element at the end of the array, doubling the array if capacity is not sufficient.
     * \param pElement Element to append to the array.
-    * \return -1 if add failed, otherwise the position of the added element in the array. */
+    * \return -1 if add failed, otherwise the position of the added element in the array. 
+    * \remark This function is the optimized version of InsertAt(GetSize(), pElement) which, by skipping some validation tests, can provide up to 33% speed gains. */
     inline int Add(const T& pElement)
     {
-        return InsertAt(GetSize(), pElement);
+        int lIndex = GetSize();
+
+        if (lIndex >= GetCapacity())
+        {
+            T lElement = pElement;    //Copy element because we might move memory
+            int lNewCapacity = FbxMax(GetCapacity() * 2, 1);    //We always double capacity
+            Allocate(lNewCapacity);
+            FBX_ASSERT_RETURN_VALUE(mData, -1);
+            mData->mCapacity = lNewCapacity;
+            return Add(lElement);    //Insert copied element because reference might be moved
+        }
+
+        memcpy(&GetArray()[lIndex], &pElement, sizeof(T));
+        mData->mSize++;
+
+        return lIndex;
     }
 
     /** Append an element at the end of array, if not already present, doubling the array if capacity is not sufficient.
@@ -198,7 +214,7 @@ public:
 
         for (int i = pStartIndex; i < size; ++i)
         {
-            if (operator[](i) == pElement) return i;
+            if (GetArray()[i] == pElement) return i;
         }
         return -1;
     }
@@ -215,7 +231,7 @@ public:
 
         for (int i = FbxMin(pStartIndex, size - 1); i >= 0; --i)
         {
-            if (operator[](i) == pElement) return i;
+            if (GetArray()[i] == pElement) return i;
         }
         return -1;
     }
@@ -226,7 +242,7 @@ public:
     * \remark If the requested capacity is less than or equal to the current capacity, this call has no effect. In either case, Size() is unchanged. */
     inline bool Reserve(const int pCapacity)
     {
-        FBX_ASSERT_RETURN_VALUE(pCapacity > 0, false);
+        FBX_ASSERT_RETURN_VALUE(pCapacity >= 0, false);
         if( pCapacity > GetCapacity() )
         {
             Allocate(pCapacity);
@@ -356,9 +372,10 @@ public:
 
     /** Inserts or erases elements at the end such that Size() becomes pSize, increasing capacity if needed. Please use SetAt() to initialize any new elements.
     * \param pSize The new count of elements to set the array to. Must be greater or equal to zero.
+    * \param pPreserveCapacityIfPossible If the new count will fit into the existing allocation, do not adjust the capacity.
     * \return \c true if the memory (re)allocation succeeded, \c false otherwise.
-    * \remark If the requested element count is less than or equal to the current count, elements are freed from memory. Otherwise, the array grows and elements are unchanged. */
-    inline bool Resize(const int pSize)
+    * \remark If the requested element count is less than or equal to the current count, elements are freed from memory. Otherwise, the array grows and elements are unchanged. The new array memory is not cleared to 0. */
+    inline bool ResizeUninitialized(const int pSize, bool pPreserveCapacityIfPossible = false)
     {
         if( pSize == GetSize() && GetSize() == GetCapacity() ) return true;
 
@@ -369,19 +386,61 @@ public:
         }
 
         FBX_ASSERT_RETURN_VALUE(pSize > 0, false);
-        if( pSize != GetCapacity() )
+
+        bool lReallocate;
+        if (pPreserveCapacityIfPossible)
+            lReallocate = pSize > GetCapacity();
+        else
+            lReallocate = pSize != GetCapacity();
+        
+        if (lReallocate)
         {
             Allocate(pSize);
             FBX_ASSERT_RETURN_VALUE(mData, false);
-        }
-
-        if( pSize > GetCapacity() )    //Initialize new memory to zero
-        {
-            memset(&GetArray()[GetSize()], 0, (pSize - GetSize()) * sizeof(T));
+            mData->mCapacity = pSize;
         }
 
         mData->mSize = pSize;
-        mData->mCapacity = pSize;
+        return true;
+    }
+
+    /** Inserts or erases elements at the end such that Size() becomes pSize, increasing capacity if needed. Please use SetAt() to initialize any new elements.
+    * \param pSize The new count of elements to set the array to. Must be greater or equal to zero.
+    * \param pPreserveCapacityIfPossible If the new count will fit into the existing allocation, do not adjust the capacity.
+    * \return \c true if the memory (re)allocation succeeded, \c false otherwise.
+    * \remark If the requested element count is less than or equal to the current count, elements are freed from memory. Otherwise, the array grows and elements are unchanged. */
+    inline bool Resize(const int pSize, bool pPreserveCapacityIfPossible = false)
+    {
+        if (pSize == GetSize() && GetSize() == GetCapacity()) return true;
+
+        if (pSize == 0)
+        {
+            Clear();
+            return true;
+        }
+
+        FBX_ASSERT_RETURN_VALUE(pSize > 0, false);
+
+        bool lReallocate;
+        if (pPreserveCapacityIfPossible)
+            lReallocate = pSize > GetCapacity();
+        else
+            lReallocate = pSize != GetCapacity();
+
+        if (lReallocate)
+        {
+            Allocate(pSize);
+            FBX_ASSERT_RETURN_VALUE(mData, false);
+
+            if (pSize > GetCapacity())    //Initialize new memory to zero
+            {
+                memset(&GetArray()[GetSize()], 0, (pSize - GetSize()) * sizeof(T));
+            }
+        
+            mData->mCapacity = pSize;
+        }
+
+        mData->mSize = pSize;
         return true;
     }
 

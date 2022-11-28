@@ -1,6 +1,6 @@
 /*
- * Summary: compile-time version informations on Windows
- * Description: compile-time version informations for the XML library
+ * Summary: compile-time version information on Windows
+ * Description: compile-time version information for the XML library
  *              when compiled on the Windows platform
  *
  * Copy: See Copyright for the status of this software.
@@ -28,21 +28,21 @@ extern void xmlCheckVersion(int version);
  *
  * the version string like "1.2.3"
  */
-#define LIBXML_DOTTED_VERSION "2.9.10"
+#define LIBXML_DOTTED_VERSION "2.9.12"
 
 /**
  * LIBXML_VERSION:
  *
  * the version number: 1.2.3 value is 1002003
  */
-#define LIBXML_VERSION 209010
+#define LIBXML_VERSION 209012
 
 /**
  * LIBXML_VERSION_STRING:
  *
  * the version number string, 1.2.3 value is "1002003"
  */
-#define LIBXML_VERSION_STRING "209010"
+#define LIBXML_VERSION_STRING "209012"
 
 /**
  * LIBXML_VERSION_EXTRA:
@@ -57,7 +57,7 @@ extern void xmlCheckVersion(int version);
  * Macro to check that the libxml version in use is compatible with
  * the version the software has been compiled against
  */
-#define LIBXML_TEST_VERSION xmlCheckVersion(209010);
+#define LIBXML_TEST_VERSION xmlCheckVersion(209012);
 
 #if 0
 /**

@@ -385,6 +385,7 @@
 #define IOSN_PREFERED_ENVELOPPE_SYSTEM      "kImportPreferedEnveloppeSystem"
 #define IOSN_FIRST_TIME_RUN_NOTICE          "FirstTimeRunNotice"
 #define IOSN_EXTRACT_EMBEDDED_DATA          "ExtractEmbeddedData"
+#define IOSN_CALCULATE_LEGACY_SHAPE_NORMAL  "CalculateLegacyShapeNormal"
 
 // internal usage
 #define IOSN_USETMPFILEPERIPHERAL		   "UseTmpFilePeripheral"
@@ -612,6 +613,7 @@
 #define IMP_FBX_PASSWORD_ENABLE                IMP_FBX "|" IOSN_PASSWORD_ENABLE
 #define IMP_FBX_CURRENT_TAKE_NAME              IMP_FBX "|" IOSN_CURRENT_TAKE_NAME
 #define IMP_FBX_EXTRACT_EMBEDDED_DATA          IMP_FBX "|" IOSN_EXTRACT_EMBEDDED_DATA
+#define IMP_FBX_CALCULATE_LEGACY_SHAPE_NORMAL  IMP_FBX "|" IOSN_CALCULATE_LEGACY_SHAPE_NORMAL // only used on FBX v7 (and above) imports. Turning this flag off will prevent the legacy type shapes to have normals
 
 #define IMP_FBX_NORMAL                   IMP_FBX "|" IOSN_NORMAL
 #define IMP_FBX_BINORMAL                 IMP_FBX "|" IOSN_BINORMAL

@@ -900,7 +900,7 @@ private:
 
 /**Time shift and scale filter.
   *\nosubgrouping
-  * Filter to shift key times and scale key values on animation curves.
+  * Filter to shift and/or scale key times on animation curve.
   */
 class FBXSDK_DLL FbxAnimCurveFilterTSS : public FbxAnimCurveFilter
 {
@@ -954,6 +954,8 @@ public:
 
     /** Set the scale factor.
       * \param pScale     The new scale factor to set.
+      * \remark The parameter can be set to any value but the filter will not use it when 0 or negative. 
+      * However, a custom filter derived from this class may be able to manipulate any value set. 
       */
 	void SetScale(double pScale);
 

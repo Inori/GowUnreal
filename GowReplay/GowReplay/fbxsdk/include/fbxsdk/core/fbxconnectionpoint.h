@@ -231,18 +231,17 @@ protected:
 
 	protected:
 		struct Connection {
-			Connection(FbxConnectionPoint* pPoint, FbxConnection::EType pType) : mPoint(pPoint), mType(pType){}
+			Connection(FbxConnectionPoint* pPoint, FbxConnection::EType pType) : mPoint(pPoint), mType(pType) {}
 			FbxConnectionPoint* mPoint; FbxConnection::EType mType;
 		};
 
         // Separate the arrays for better cache usage when only touching 1 piece of data (eg in FindSrc)
         // These arrays must be kept in sync (eg during AddSrc, RemoveSrcAt, etc)
+		FbxSet<FbxConnectionPoint*>     mSrcListLookup;
         FbxArray<FbxConnectionPoint*>   mSrcPointList;
         FbxArray<FbxConnection::EType>  mSrcTypeList;
         
-        FbxArray<Connection>            mDstList;
-
-        FbxSet<FbxConnectionPoint*>     mSrcListLookup;
+		FbxArray<Connection>            mDstList;
 	};
 
 	void				SubConnectAdd(FbxConnectionPoint* pConnect);
