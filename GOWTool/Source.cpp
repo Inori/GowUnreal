@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "Rig.h"
 #include "glTFSerializer.h"
+#include "FBXSerializer.h"
 #include "Formats.h"
 #include "MainFunctions.h"
 #include "Texpack.h"
@@ -382,8 +383,9 @@ bool ExportAllSkinnedMesh(WadFile& wad, vector<Lodpack*>& lodpacks,const std::fi
                     }
                 }
             }
-            std::filesystem::path outfile = outdir / (wad._FileEntries[i].name + "." + std::to_string(i) + ".glb");
-            WriteGLTF(outfile, meshes, rig);
+            std::filesystem::path outfile = outdir / (wad._FileEntries[i].name + "." + std::to_string(i) + ".fbx");
+            //WriteGLTF(outfile, meshes, rig);
+            writeFbx(outfile, meshes, rig);
         }
     }
     return true;
@@ -530,9 +532,8 @@ void ParseWad()
 
 int main(int argc, char* argv[])
 {
-    ParseWad();
-    return 0;
-
+   // ParseWad();
+    //return 0;
     if (argc < 2)
     {
         Utils::Logger::Error("Required argument was not provided.\n");

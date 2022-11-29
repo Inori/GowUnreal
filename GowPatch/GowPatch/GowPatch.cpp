@@ -96,8 +96,8 @@ HANDLE WINAPI NewCreateFileW(
 
 		if (s_nameSet.find(fileName) == s_nameSet.end())
 		{
-			logger->info(L"{}", fileName);
-			logger->flush();
+			//logger->info(L"{}", fileName);
+			//logger->flush();
 
 			s_nameSet.insert(fileName);
 		}
@@ -133,7 +133,7 @@ BOOL WINAPI NewReadFile(
 {
 	BOOL bRet = g_OldReadFile(hFile, lpBuffer, nNumberOfBytesToRead, lpNumberOfBytesRead, lpOverlapped);
 
-	const char* szTag = "ANM_fx_kratos_breath";
+	const char* szTag = "attRageEnter02";
 	DWORD       dwTagLen = strlen(szTag);
 
 	auto logger = spdlog::get("gow-logger");
@@ -634,11 +634,18 @@ unsigned __stdcall ParseGlobalList(void* pArguments)
 	return 0;
 }
 
-typedef void (*PFUNC_ParseAnime)();
+// in asm file
+extern "C" void* ParseAnimeWrapper(void* pThis, uint64_t dwUnknown, void* pAnimeFile, const char* szAnimeName);
 
-void* ParseAnime()
+typedef void* (*PFUNC_ParseAnime)(void* pThis, uint64_t dwUnknown, void* pAnimeFile);
+PFUNC_ParseAnime g_OldParseAnime = nullptr;
+
+extern "C" void* NewParseAnime(void* pThis, uint64_t dwUnknown, void* pAnimeFile, const char* szAnimeName)
 {
+	void* pAnime = g_OldParseAnime(pThis, dwUnknown, pAnimeFile);
 
+
+	return pAnime;
 }
 
 
@@ -665,10 +672,14 @@ void SetupHook()
 	g_OldMap   = (PFUNC_Map)((BYTE*)hD3D11 + 0x105640);
 	g_OldUnmap = (PFUNC_Unmap)((BYTE*)hD3D11 + 0x105870);
 
-	g_OldMoveCamera           = (PFUNC_MoveCamera)((BYTE*)GetModuleHandleA(NULL) + 0x4E7A40);
+	BYTE* pModBase  = (BYTE*)GetModuleHandleA(NULL);
+	g_OldMoveCamera = (PFUNC_MoveCamera)(pModBase + 0x4E7A40);
+	g_OldParseAnime = (PFUNC_ParseAnime)(pModBase + 0x4ABD20);
+	
 
 	DetourTransactionBegin();
 	DetourUpdateThread(GetCurrentThread());
+
 
 	DetourAttach((void**)&g_OldCreateFileW, NewCreateFileW);
 	DetourAttach((void**)&g_OldReadFile, NewReadFile);
@@ -677,6 +688,7 @@ void SetupHook()
 	//DetourAttach((void**)&g_OldMoveCamera, NewMoveCamera);
 	//DetourAttach((void**)&g_OldMap, NewMap);
 	//DetourAttach((void**)&g_OldUnmap, NewUnmap);
+	//DetourAttach((void**)&g_OldParseAnime, ParseAnimeWrapper);
 
 	DetourTransactionCommit();
 

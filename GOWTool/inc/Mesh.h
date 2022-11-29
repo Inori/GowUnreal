@@ -63,9 +63,9 @@ struct MeshInfo
 	uint32_t indCount{ 0 };
 	uint64_t vertexOffset{ UINT64_MAX };
 	uint64_t indicesOffset{ UINT64_MAX };
-	vector<Component> Components;
-	vector<uint64_t> bufferOffset;
-	vector<uint16_t> bufferStride;
+	std::vector<Component> Components;
+	std::vector<uint64_t> bufferOffset;
+	std::vector<uint16_t> bufferStride;
 
 	Vec3 meshScale{ };
 	Vec3 meshMin{ };

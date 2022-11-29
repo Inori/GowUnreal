@@ -340,7 +340,8 @@ void WriteGLTF(const std::filesystem::path& path, const vector<RawMeshContainer>
         for (uint16_t i = 0; i < Armature.boneCount; i++)
         {
             Node node;
-            node.name = Armature.boneNames[i];
+            node.id = std::to_string(i);
+            node.name = Armature.boneNames[i] + "_" + node.id;
             node.matrix = Microsoft::glTF::Matrix4();
             for (size_t r = 0; r < 4; r++)
             {
