@@ -321,6 +321,11 @@ bool ExportAllSkinnedMesh(WadFile& wad, vector<Lodpack*>& lodpacks,const std::fi
     {
         if (wad._FileEntries[i].type == WadFile::FileType::SkinnedMeshDef)
         {
+            if (wad._FileEntries[i].name.find("MG_heroa00_0") != std::string::npos)
+            {
+                __debugbreak();
+            }
+
             std::string name = wad._FileEntries[i].name.substr(3, wad._FileEntries[i].name.length() - 5);
             std::stringstream meshDefStream;
             std::stringstream meshBuffStream;
@@ -384,11 +389,6 @@ bool ExportAllSkinnedMesh(WadFile& wad, vector<Lodpack*>& lodpacks,const std::fi
                 }
             }
             std::filesystem::path outfile = outdir / (wad._FileEntries[i].name + "." + std::to_string(i) + ".fbx");
-
-            if (outfile.string().find("MG_heroa00") != std::string::npos)
-            {
-                __debugbreak();
-            }
             //WriteGLTF(outfile, meshes, rig);
             writeFbx(outfile, meshes, rig);
         }
