@@ -121,7 +121,7 @@
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpplatest</LanguageStandard>
-      <AdditionalIncludeDirectories>.\inc;.\src;.;.\glTF-SDK\GLTFSDK\inc;.\DirectXTex;.\fbxsdk\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>.\inc;.\src;.;.\glTF-SDK\GLTFSDK\inc;.\DirectXTex;.\fbxsdk\include;.\glm</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
     </ClCompile>
     <Link>
@@ -144,7 +144,7 @@
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>.\inc;.\src;.;.\glTF-SDK\GLTFSDK\inc;.\DirectXTex;.\fbxsdk\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>.\inc;.\src;.;.\glTF-SDK\GLTFSDK\inc;.\DirectXTex;.\fbxsdk\include;.\glm</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
     <Link>

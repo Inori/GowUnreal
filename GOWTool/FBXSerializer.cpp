@@ -1,4 +1,7 @@
 #include "FBXSerializer.h"
+#include "gtc/matrix_access.hpp"
+#include "gtc/constants.hpp"
+#include "gtx/euler_angles.hpp"
 
 #ifdef IOS_REF
 #undef  IOS_REF
@@ -32,7 +35,17 @@ void FbxSdkManager::writeFbx(
 
         for (int i = 0; i < expMeshes.size(); i++)
         {
-            auto node = createMesh(expMeshes[i]);
+            const auto& mesh = expMeshes[i];
+
+            FBXSDK_printf("Process mesh %s\n\n", mesh.name.c_str());
+
+            auto node = createMesh(mesh);
+
+            if (armature.boneCount > 0)
+            {
+                bindSkeleton(expMeshes[i], armature, node);
+            }
+
             rootNode->AddChild(node);
         }
 
@@ -77,6 +90,154 @@ FbxNode* FbxSdkManager::createMesh(const RawMeshContainer& rawMesh)
     node->SetNodeAttribute(lMesh);
     node->SetShadingMode(FbxNode::eTextureShading);
     return node;
+}
+
+void FbxSdkManager::bindSkeleton(const RawMeshContainer& rawMesh, const Rig& armature, FbxNode* meshNode)
+{
+    FbxMesh* mesh = meshNode->GetMesh();
+
+    FbxSkin* lSkin = FbxSkin::Create(m_scene, "");
+   
+    auto skeletons = createSkeleton(armature);
+    
+    FbxNode* rootSkeleton = skeletons[0];
+
+    linkSkeleton(rawMesh, armature, lSkin, rootSkeleton);
+
+    mesh->AddDeformer(lSkin);
+}
+
+std::vector<FbxNode*> FbxSdkManager::createSkeleton(const Rig& armature)
+{
+    auto toFbxDb3 = [](const glm::vec3& vec)
+    {
+        return FbxDouble3(vec[0], vec[1], vec[2]);
+    };
+
+    std::vector<FbxNode*> nodes;
+    nodes.reserve(armature.boneCount);
+
+    for (uint16_t i = 0; i < armature.boneCount; ++i)
+    {
+        std::string name = armature.boneNames[i] + "_" + std::string("J") + std::to_string(i);
+
+        glm::mat4 boneMatrix;
+        std::memcpy(&boneMatrix, &armature.matrix[i], sizeof(boneMatrix));
+        auto trs = decomposeTransform(boneMatrix);
+
+        FbxSkeleton* lSkeletonAttribute = FbxSkeleton::Create(m_scene, name.c_str());
+        FbxNode* node = FbxNode::Create(m_scene, name.c_str());
+        node->SetNodeAttribute(lSkeletonAttribute);
+        node->SetUserDataPtr(0, reinterpret_cast<void*>(i)); // record bone id
+        // Apply transform
+        node->LclTranslation.Set(toFbxDb3(trs.translation));
+        node->LclRotation.Set(toFbxDb3(trs.rotation));
+        node->LclScaling.Set(toFbxDb3(trs.scaling));
+
+        int16_t parentId = armature.boneParents[i];
+        if (parentId > -1)
+        {
+            // the skeleton has parent, so it's eLimbNode
+            lSkeletonAttribute->SetSkeletonType(FbxSkeleton::eLimbNode);
+            lSkeletonAttribute->Size.Set(1.0);
+
+            auto& parentNode = nodes[parentId];
+            parentNode->AddChild(node);
+        }
+        else
+        {
+            // the skeleton doesn't have parent, so it's eRoot
+            lSkeletonAttribute->SetSkeletonType(FbxSkeleton::eRoot);
+        }
+
+        nodes.push_back(node);
+    }
+
+    return nodes;
+}
+
+void FbxSdkManager::linkSkeleton(const RawMeshContainer& rawMesh, const Rig& armature, FbxSkin* skin, FbxNode* skeleton)
+{
+    auto toFbxMatrix = [](Matrix4x4& in)
+    {
+        FbxAMatrix out;
+        for (size_t r = 0; r < 4; r++)
+        {
+            for (size_t c = 0; c < 4; c++)
+            {
+                out[r][c] = in[r][c];
+            }
+        }
+        return out;
+    };
+
+    FbxCluster* lCluster = FbxCluster::Create(m_scene, "");
+    lCluster->SetLink(skeleton);
+    lCluster->SetLinkMode(FbxCluster::eTotalOne);
+
+    uint16_t boneId = reinterpret_cast<uint16_t>(skeleton->GetUserDataPtr(0));
+    for (size_t vId = 0; vId != rawMesh.VertCount; ++vId)
+    {
+        uint16_t* joints = rawMesh.joints[vId];
+        float* weights = rawMesh.weights[vId];
+        for (size_t j = 0; j != 4; ++j)
+        {
+            uint16_t bindId = joints[j];
+            if (bindId == boneId)
+            {
+                lCluster->AddControlPointIndex(vId, weights[j]);
+                break;
+            }
+        }
+    }
+
+    FbxAMatrix boneMatrix = skeleton->EvaluateGlobalTransform();
+    FbxAMatrix offsetMatrix = toFbxMatrix(armature.IBMs[boneId]);
+    FbxAMatrix meshMatrix = offsetMatrix * boneMatrix;
+
+    lCluster->SetTransformMatrix(meshMatrix);
+    lCluster->SetTransformLinkMatrix(boneMatrix);
+
+    skin->AddCluster(lCluster);
+
+    int childCount = skeleton->GetChildCount();
+    for (int k = 0; k != childCount; ++k)
+    {
+        FbxNode* child = skeleton->GetChild(k);
+        linkSkeleton(rawMesh, armature, skin, child);
+    }
+}
+
+FbxSdkManager::MeshTransform FbxSdkManager::decomposeTransform(const glm::mat4& transform)
+{
+    MeshTransform result = {};
+
+    result.translation.x = transform[3][0];
+    result.translation.y = transform[3][1];
+    result.translation.z = transform[3][2];
+
+    result.scaling.x = glm::length(glm::column(transform, 0));
+    result.scaling.y = glm::length(glm::column(transform, 1));
+    result.scaling.z = glm::length(glm::column(transform, 2));
+
+    const auto& scaling = result.scaling;
+    // get upper 3x3 matrix
+    glm::mat3 upper = glm::mat3(transform);
+    glm::column(upper, 0, glm::column(upper, 0) / scaling.x);
+    glm::column(upper, 1, glm::column(upper, 1) / scaling.y);
+    glm::column(upper, 2, glm::column(upper, 2) / scaling.z);
+
+    // default rotation order in FBX SDK is of XYZ, R = Rx * Ry * Rz
+    // so we need to rotate across Z then Y then X
+    glm::mat4 rotation = glm::mat4(upper);
+    glm::vec3 radians = {};
+    glm::extractEulerAngleZYX(rotation, radians.z, radians.y, radians.x);
+
+    result.rotation = glm::degrees(radians);
+
+    return result;
+
+    return result;
 }
 
 void FbxSdkManager::assignNormal(const RawMeshContainer& rawMesh, FbxMesh* mesh)
