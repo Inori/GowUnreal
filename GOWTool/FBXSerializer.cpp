@@ -31,10 +31,12 @@ void FbxSdkManager::writeFbx(
             break;
         }
 
+        FbxNode* rootNode = m_scene->GetRootNode();
+
         auto skeletonNodes = createSkeleton(armature);
         FbxNode* skeletonRoot = skeletonNodes[0];
-
-        FbxNode* rootNode = m_scene->GetRootNode();
+        
+        rootNode->AddChild(skeletonRoot);
 
         for (int i = 0; i < expMeshes.size(); i++)
         {
