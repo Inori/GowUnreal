@@ -31,6 +31,9 @@ void FbxSdkManager::writeFbx(
             break;
         }
 
+        auto skeletonNodes = createSkeleton(armature);
+        FbxNode* skeletonRoot = skeletonNodes[0];
+
         FbxNode* rootNode = m_scene->GetRootNode();
 
         for (int i = 0; i < expMeshes.size(); i++)
@@ -43,7 +46,7 @@ void FbxSdkManager::writeFbx(
 
             if (armature.boneCount > 0)
             {
-                bindSkeleton(expMeshes[i], armature, node);
+                bindSkeleton(expMeshes[i], armature, skeletonRoot, node);
             }
 
             rootNode->AddChild(node);
@@ -92,19 +95,21 @@ FbxNode* FbxSdkManager::createMesh(const RawMeshContainer& rawMesh)
     return node;
 }
 
-void FbxSdkManager::bindSkeleton(const RawMeshContainer& rawMesh, const Rig& armature, FbxNode* meshNode)
+void FbxSdkManager::bindSkeleton(
+    const RawMeshContainer& rawMesh,
+    const Rig& armature,
+    FbxNode* skeletonRoot,
+    FbxNode* meshNode)
 {
     FbxMesh* mesh = meshNode->GetMesh();
 
     FbxSkin* lSkin = FbxSkin::Create(m_scene, "");
-   
-    auto skeletons = createSkeleton(armature);
-    
-    FbxNode* rootSkeleton = skeletons[0];
+    linkSkeleton(rawMesh, armature, lSkin, skeletonRoot);
 
-    linkSkeleton(rawMesh, armature, lSkin, rootSkeleton);
-
-    mesh->AddDeformer(lSkin);
+    if (lSkin->GetClusterCount() != 0)
+    {
+        mesh->AddDeformer(lSkin);
+    }
 }
 
 std::vector<FbxNode*> FbxSdkManager::createSkeleton(const Rig& armature)
@@ -134,6 +139,8 @@ std::vector<FbxNode*> FbxSdkManager::createSkeleton(const Rig& armature)
         node->LclRotation.Set(toFbxDb3(trs.rotation));
         node->LclScaling.Set(toFbxDb3(trs.scaling));
 
+        nodes.push_back(node);
+
         int16_t parentId = armature.boneParents[i];
         if (parentId > -1)
         {
@@ -150,7 +157,7 @@ std::vector<FbxNode*> FbxSdkManager::createSkeleton(const Rig& armature)
             lSkeletonAttribute->SetSkeletonType(FbxSkeleton::eRoot);
         }
 
-        nodes.push_back(node);
+       
     }
 
     return nodes;
@@ -171,11 +178,8 @@ void FbxSdkManager::linkSkeleton(const RawMeshContainer& rawMesh, const Rig& arm
         return out;
     };
 
-    FbxCluster* lCluster = FbxCluster::Create(m_scene, "");
-    lCluster->SetLink(skeleton);
-    lCluster->SetLinkMode(FbxCluster::eTotalOne);
-
     uint16_t boneId = reinterpret_cast<uint16_t>(skeleton->GetUserDataPtr(0));
+    std::vector<std::pair<int, float>> cpIndices;
     for (size_t vId = 0; vId != rawMesh.VertCount; ++vId)
     {
         uint16_t* joints = rawMesh.joints[vId];
@@ -185,20 +189,32 @@ void FbxSdkManager::linkSkeleton(const RawMeshContainer& rawMesh, const Rig& arm
             uint16_t bindId = joints[j];
             if (bindId == boneId)
             {
-                lCluster->AddControlPointIndex(vId, weights[j]);
+                cpIndices.push_back(std::make_pair(vId, weights[j]));
                 break;
             }
         }
     }
 
-    FbxAMatrix boneMatrix = skeleton->EvaluateGlobalTransform();
-    FbxAMatrix offsetMatrix = toFbxMatrix(armature.IBMs[boneId]);
-    FbxAMatrix meshMatrix = offsetMatrix * boneMatrix;
+    if (!cpIndices.empty())
+    {
+        FbxCluster* lCluster = FbxCluster::Create(m_scene, "");
+        lCluster->SetLink(skeleton);
+        lCluster->SetLinkMode(FbxCluster::eTotalOne);
 
-    lCluster->SetTransformMatrix(meshMatrix);
-    lCluster->SetTransformLinkMatrix(boneMatrix);
+        for (const auto& cpi : cpIndices)
+        {
+            lCluster->AddControlPointIndex(cpi.first, cpi.second);
+        }
 
-    skin->AddCluster(lCluster);
+        FbxAMatrix boneMatrix = skeleton->EvaluateGlobalTransform();
+        FbxAMatrix offsetMatrix = toFbxMatrix(armature.IBMs[boneId]);
+        FbxAMatrix meshMatrix = offsetMatrix * boneMatrix;
+
+        lCluster->SetTransformMatrix(meshMatrix);
+        lCluster->SetTransformLinkMatrix(boneMatrix);
+
+        skin->AddCluster(lCluster);
+    }
 
     int childCount = skeleton->GetChildCount();
     for (int k = 0; k != childCount; ++k)

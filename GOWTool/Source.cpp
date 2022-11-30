@@ -384,6 +384,11 @@ bool ExportAllSkinnedMesh(WadFile& wad, vector<Lodpack*>& lodpacks,const std::fi
                 }
             }
             std::filesystem::path outfile = outdir / (wad._FileEntries[i].name + "." + std::to_string(i) + ".fbx");
+
+            if (outfile.string().find("MG_heroa00") != std::string::npos)
+            {
+                __debugbreak();
+            }
             //WriteGLTF(outfile, meshes, rig);
             writeFbx(outfile, meshes, rig);
         }

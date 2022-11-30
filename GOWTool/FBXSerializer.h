@@ -34,7 +34,11 @@ private:
 	void assignTexcoord(Vec2* texcoord, uint32_t count, FbxMesh* mesh);
 	void assignTangent(const RawMeshContainer& rawMesh, FbxMesh* mesh);
 
-	void bindSkeleton(const RawMeshContainer& rawMesh, const Rig& armature, FbxNode* meshNode);
+    void bindSkeleton(
+        const RawMeshContainer& rawMesh,
+        const Rig& armature,
+        FbxNode* skeletonRoot,
+        FbxNode* meshNode);
 	std::vector<FbxNode*> createSkeleton(const Rig& armature);
 	void linkSkeleton(const RawMeshContainer& rawMesh, const Rig& armature, FbxSkin* skin, FbxNode* skeleton);
 
