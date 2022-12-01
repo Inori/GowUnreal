@@ -33,10 +33,13 @@ void FbxSdkManager::writeFbx(
 
         FbxNode* rootNode = m_scene->GetRootNode();
 
+        FbxNode* skeletonRoot = nullptr;
         auto skeletonNodes = createSkeleton(armature);
-        FbxNode* skeletonRoot = skeletonNodes[0];
-        
-        rootNode->AddChild(skeletonRoot);
+        if (!skeletonNodes.empty())
+        {
+            skeletonRoot = skeletonNodes[0];
+            rootNode->AddChild(skeletonRoot);
+        }
 
         for (int i = 0; i < expMeshes.size(); i++)
         {
@@ -46,7 +49,7 @@ void FbxSdkManager::writeFbx(
 
             auto node = createMesh(mesh);
 
-            if (armature.boneCount > 0)
+            if (!skeletonNodes.empty())
             {
                 bindSkeleton(expMeshes[i], armature, skeletonRoot, node);
             }
@@ -158,8 +161,6 @@ std::vector<FbxNode*> FbxSdkManager::createSkeleton(const Rig& armature)
             // the skeleton doesn't have parent, so it's eRoot
             lSkeletonAttribute->SetSkeletonType(FbxSkeleton::eRoot);
         }
-
-       
     }
 
     return nodes;
@@ -252,8 +253,6 @@ FbxSdkManager::MeshTransform FbxSdkManager::decomposeTransform(const glm::mat4& 
     glm::extractEulerAngleZYX(rotation, radians.z, radians.y, radians.x);
 
     result.rotation = glm::degrees(radians);
-
-    return result;
 
     return result;
 }
