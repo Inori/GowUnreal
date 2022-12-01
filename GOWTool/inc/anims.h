@@ -64,9 +64,50 @@ struct AnimeDefHeader
     uint16_t unknown14;
 	uint16_t unknown9;
 	uint16_t unknown10;
-	uint32_t unknown11;
+
+	uint32_t size;  // only valid when (flags & 0x8000) != 0
 	uint16_t unknown12;
 	uint16_t unknown13;
+	uint32_t unknown15;
+	uint32_t unknown16;
+	uint64_t blockOffset;
+};
+
+
+// 000000014015DB6F
+// finaleOffset = offset << 0x10 + (((shift & 0xC000) << 2) | mask)
+struct AnimeOffsetBlock
+{
+	uint32_t unknown0;
+	uint32_t offset;
+	uint32_t unknown2;
+	uint16_t shift;
+	uint16_t mask;
+};
+
+struct AnimeDataHeader
+{
+	uint32_t unknown0;
+	uint32_t unknown1;
+	uint32_t unknown2;
+    uint16_t unknown3;
+    uint16_t unknown4;
+	uint32_t unknown5;
+	uint32_t entryOffset;
+    uint32_t unknown6;
+	float tickCount;
+	uint16_t flags;
+	uint16_t limit; // ?
+	float unknown9;
+	float duration;
+};
+
+struct AnimeDataEntry
+{
+    uint32_t unknown0;
+    uint32_t unknown1;
+    uint32_t offset;
+    uint32_t unknown3;
 };
 
 #pragma pack()
