@@ -112,6 +112,7 @@ struct AnimeActionHeader
 	uint32_t unknown7;
 };
 
+// 0000000140B32030
 struct AnimeActionEntry
 {
     uint32_t boneIndexTableOffset;
