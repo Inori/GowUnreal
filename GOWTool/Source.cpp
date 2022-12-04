@@ -11,6 +11,7 @@
 #include "utils.h"
 #include "Gnf.h"
 #include "converter.h"
+#include "animation.h"
 
 #include <unordered_set>
 
@@ -516,11 +517,6 @@ void ParseWad()
 
             for (const auto& item : wad._FileEntries)
             {
-                //if (typeSet.find(item.type) != typeSet.end())
-                //{
-                //    continue;
-                //}
-
                 if (item.type == WadFile::FileType::Anime || item.name.find("ANM_") != std::string::npos)
                 {
                     typeSet.insert(item.type);
@@ -535,10 +531,35 @@ void ParseWad()
     }
 }
 
+void ParseAnime(WadFile& wad)
+{
+    for (size_t i = 0; i != wad._FileEntries.size(); ++i)
+    {
+        auto& entry = wad._FileEntries[i];
+
+        if (entry.type != WadFile::FileType::Anime)
+        {
+            continue;
+        }
+
+        if (entry.name != "ANM_heroa00")
+        {
+            continue;
+        }
+        cout << "PackName: " << entry.name << "\n";
+
+        std::stringstream animeStream;
+        wad.GetBuffer(i, animeStream);
+
+        Anime anime;
+        anime.Read(animeStream);
+
+        cout << "----------------" << "\n";
+    }
+}
+
 int main(int argc, char* argv[])
 {
-   // ParseWad();
-    //return 0;
     if (argc < 2)
     {
         Utils::Logger::Error("Required argument was not provided.\n");
@@ -737,14 +758,16 @@ int main(int argc, char* argv[])
                     Utils::Logger::Error("\nspecified gamedir(including sub-directories) doesn't contain any .lodpack files, export failed");
                     return -1;
                 }
-                if (ExportAllSkinnedMesh(wad, lodpacks, outpath) && ExportAllRigidMesh(wad, lodpacks, outpath))
-                {
-                    Utils::Logger::Success(("\nSuccessfully exported all meshes to: " + outpath.string()).c_str());
-                }
-                else
-                {
-                    Utils::Logger::Error("\nMeshes export Failed.");
-                }
+
+                ParseAnime(wad);
+                //if (ExportAllSkinnedMesh(wad, lodpacks, outpath) && ExportAllRigidMesh(wad, lodpacks, outpath))
+                //{
+                //    Utils::Logger::Success(("\nSuccessfully exported all meshes to: " + outpath.string()).c_str());
+                //}
+                //else
+                //{
+                //    Utils::Logger::Error("\nMeshes export Failed.");
+                //}
 
                 for (auto& pack : lodpacks)
                 {

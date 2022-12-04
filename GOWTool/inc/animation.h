@@ -27,6 +27,7 @@ struct AnimePackEntry
 	uint64_t offset;
 };
 
+// 000000014056A500
 struct AnimeGroupHeader
 {
 	uint32_t unknown0[4];
@@ -48,12 +49,13 @@ struct AnimeGroupEntry
     uint64_t offset;
 };
 
+// 00000001405C72F0
 struct AnimeDefHeader
 {
 	uint64_t hash;
 	char name[0x38];
 	uint32_t flags;
-	uint32_t unknown1;
+	uint32_t someOffset;  //  00000001405C5ED8: only valid when (flags & 0x40000000) != 0
 	uint32_t unknown2;
 	uint32_t unknown3;
 	float unknown4;
@@ -64,18 +66,21 @@ struct AnimeDefHeader
     uint16_t unknown14;
 	uint16_t unknown9;
 	uint16_t unknown10;
-
-	uint32_t size;  // only valid when (flags & 0x8000) != 0
-	uint16_t unknown12;
-	uint16_t unknown13;
-	uint32_t unknown15;
-	uint32_t unknown16;
-	uint64_t blockOffset;
 };
+
+// 00000001400EA2D0
+struct AnimeDefEntry
+{
+    uint32_t size;
+    uint16_t valid;
+    uint16_t unknown0;
+	uint64_t unknown1;
+	uint64_t offset;
+}; 
 
 
 // 000000014015DB6F
-// finaleOffset = offset << 0x10 + (((shift & 0xC000) << 2) | mask)
+// finaleOffset = offset << 0x10 + (( (shift & 0xC000) << 2) | mask)
 struct AnimeOffsetBlock
 {
 	uint32_t unknown0;
@@ -85,37 +90,47 @@ struct AnimeOffsetBlock
 	uint16_t mask;
 };
 
-struct AnimeDataHeader
+
+// 0000000140B17E90
+struct AnimeActionHeader
 {
 	uint32_t unknown0;
 	uint32_t unknown1;
 	uint32_t unknown2;
-    uint16_t unknown3;
+    uint16_t entryCount;
     uint16_t unknown4;
+
 	uint32_t unknown5;
 	uint32_t entryOffset;
     uint32_t unknown6;
 	float tickCount;
+
 	uint16_t flags;
-	uint16_t limit; // ?
+	uint16_t limit; // ? 0000000140B2F871
 	float unknown9;
 	float duration;
+	uint32_t unknown7;
 };
 
-struct AnimeDataEntry
+struct AnimeActionEntry
 {
-    uint32_t unknown0;
+    uint32_t boneIndexTableOffset;
     uint32_t unknown1;
     uint32_t offset;
-    uint32_t unknown3;
+    uint16_t valid;
+	uint16_t unknown3;
 };
 
 #pragma pack()
 
-class AnimDef
+class Anime
 {
-private:
 public:
-	void Read(std::iostream &ms);
+	void Read(std::iostream &ss);
+
+private:
+	AnimeOffsetBlock* getOffsetBlock(AnimeDefHeader* defHeader, uint32_t index);
+	AnimeDefEntry* getAnimeDefEntry(AnimeDefHeader* defHeader, uint32_t index);
+	AnimeActionHeader* getAnimeAction(AnimeDefHeader* defHeader);
 };
 

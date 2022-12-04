@@ -49,7 +49,7 @@
     <ClCompile Include="src\utils.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\anims.cpp">
+    <ClCompile Include="src\animation.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\converter.cpp">
@@ -100,7 +100,7 @@
     <ClInclude Include="inc\utils.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="inc\anims.h">
+    <ClInclude Include="inc\animation.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="inc\converter.h">
