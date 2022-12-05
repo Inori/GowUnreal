@@ -115,11 +115,17 @@ struct AnimeActionHeader
 // 0000000140B32030
 struct AnimeActionEntry
 {
-    uint32_t boneIndexTableOffset;
+    uint32_t dispatchTableOffset;  // 0000000140B320A0
     uint32_t unknown1;
     uint32_t offset;
     uint16_t valid;
 	uint16_t unknown3;
+};
+
+struct AnimeDispatchTable
+{
+	uint8_t dispatchId; // function table (0x14107C0B0) index
+	uint8_t wordCountMinusOne;  // table size = (wordCountMinusOne + 1) * 2
 };
 
 #pragma pack()
