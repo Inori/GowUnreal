@@ -1,6 +1,7 @@
 #pragma once
 #include "pch.h"
 #include <cstdint>
+#include <immintrin.h>
 
 #pragma pack(1)
 
@@ -117,18 +118,33 @@ struct AnimeActionEntry
 {
     uint32_t dispatchTableOffset;  // 0000000140B320A0
     uint32_t unknown1;
-    uint32_t offset;
+    uint32_t bitTableOffset;  // 0000000140B18139
     uint16_t valid;
 	uint16_t unknown3;
 };
 
-struct AnimeDispatchTable
+enum class AnimeDataType : uint8_t
 {
-	uint8_t dispatchId; // function table (0x14107C0B0) index
+    Pose = 0x1E,
+};
+
+struct AnimeDispatchEntry
+{
+	uint8_t dispatchId; // function table (0x14107C0B0) index, aka AnimeDataType
 	uint8_t wordCountMinusOne;  // table size = (wordCountMinusOne + 1) * 2
 };
 
+
+struct AnimePoseInfo
+{
+	uint16_t lineCount;  // one line is one XMM register size = 16 bytes
+	uint16_t selector;   // (selector & 3) is an index for rsp table, 0000000140B32059, 0000000140B315E0
+	uint16_t dataOffset;   // 
+	uint16_t otherOffset;  // some offset, not sure
+};
+
 #pragma pack()
+
 
 class Anime
 {
@@ -139,5 +155,12 @@ private:
 	AnimeOffsetBlock* getOffsetBlock(AnimeDefHeader* defHeader, uint32_t index);
 	AnimeDefEntry* getAnimeDefEntry(AnimeDefHeader* defHeader, uint32_t index);
 	AnimeActionHeader* getAnimeAction(AnimeDefHeader* defHeader);
+
+	void extractAction(AnimeActionHeader* action);
+
+	void dispatchAnimeData(uint8_t* base, AnimeDispatchEntry* table);
+	void processPoseData(uint8_t* base, AnimePoseInfo* info);
+
+	void decodePoseData(__m128i* data, uint16_t lineCount);
 };
 

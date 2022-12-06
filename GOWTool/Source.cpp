@@ -759,15 +759,15 @@ int main(int argc, char* argv[])
                     return -1;
                 }
 
-                //ParseAnime(wad);
-                if (ExportAllSkinnedMesh(wad, lodpacks, outpath) && ExportAllRigidMesh(wad, lodpacks, outpath))
-                {
-                    Utils::Logger::Success(("\nSuccessfully exported all meshes to: " + outpath.string()).c_str());
-                }
-                else
-                {
-                    Utils::Logger::Error("\nMeshes export Failed.");
-                }
+                ParseAnime(wad);
+                //if (ExportAllSkinnedMesh(wad, lodpacks, outpath) && ExportAllRigidMesh(wad, lodpacks, outpath))
+                //{
+                //    Utils::Logger::Success(("\nSuccessfully exported all meshes to: " + outpath.string()).c_str());
+                //}
+                //else
+                //{
+                //    Utils::Logger::Error("\nMeshes export Failed.");
+                //}
 
                 for (auto& pack : lodpacks)
                 {
